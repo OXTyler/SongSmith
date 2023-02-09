@@ -1,3 +1,7 @@
+# Datasets
+scripts/syllable_level_npy_39/
+scripts/word_level_29/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
