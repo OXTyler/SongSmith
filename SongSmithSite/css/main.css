@@ -17,42 +17,62 @@ html {
   line-height: 1.4;
   background: #EAFDFC;
 }
-.Logo {
-  width: 500px;
-  padding-top: 10%;
+.Showcase{
+  position: absolute;
+  right: 0;
+  width: 100%;
+  min-height: 100vh;
+  padding: 0px;
+  display: flex;
+  justify-content: space-between;
+  background: #111;
+  color: #ffffff;
+  z-index: 2;
 }
-.LyricsInput {
-  background: #A5C9CA;
-  font-family: Calibri;
-  width: 600px;
-  height: 200px;
+.overlay {
+  z-index: 10;
+  position: absolute;
+  padding: 10px;
+  padding-top: 85px;
+  font-family: helvetica;
+  vertical-align: top;
 }
-.ButtonsDiv{
-  font-size: 0px;
+.overlay img {
+
 }
-.menuButtonLeft {
-  font-size: 25px;
-  width: 200px;
-  background: #A084CF;
-  padding: 8px;
-  border-bottom-left-radius: 15px;
+.links{
+  opacity: 0.8;
+  width: 400px;
+  padding: 0px;
+  line-height: 250%;
+  margin-top: 10px;
 }
-.menuButtonRight {
-  font-size: 25px;
-  width: 200px;
-  background: #A084CF;
-  padding: 8px;
-  border-bottom-right-radius: 15px;
+h1 {
+  font-size: 120px;
+  color: white;
+  mix-blend-mode: screen;
+  justify-content: left;
+  z-index: 1;
+  margin-bottom: 0px;
+  opacity: 0.9;
 }
-/*
- * Remove text-shadow in selection highlight:
- * https://twitter.com/miketaylr/status/12228805301
- *
- * Vendor-prefixed and regular ::selection selectors cannot be combined:
- * https://stackoverflow.com/a/16982510/7133471
- *
- * Customize the background color to match your design.
- */
+a {
+  font-size: 32px;
+  margin-left: 3px;
+  color: white;
+
+  padding: 5px;
+}
+
+.Showcase video{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+}
 
 ::-moz-selection {
   background: #b3d4fc;
