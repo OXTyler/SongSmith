@@ -21,24 +21,49 @@
 
   <meta name="theme-color" content="#fafafa">
 </head>
-<body>
-  <section class="Showcase">
-    <div class="overlay">
-      <img src="img/logo.png" width="90%" height="90%"/>
-      <div class="links">
-        <a href="google.com">begin</a><br/>
-        <a href="google.com">learn more  </a>
-      </div>
-    </div>
-    <video src="img/BackgroundLoop%20.mp4" muted loop autoplay />
-    </div>
-
-
-  </section>
+<body class="Homepage">
+  <div class="Background">
+    <img src="/img/background.png">
+  </div>
+  <div class="Logo">
+    <img src="/img/Logo.png">
+  </div>
+  <div class="Textbox">
+    <textarea id="Input" onclick="clearInput()">type here...</textarea>
+  </div>
+  <div class="Vynl">
+    <img src="/img/vynl.png">
+  </div>
+  <div class="GenerateButton">
+    <button type="button">Generate</button>
+  </div>
+  <div class="bars">
+    <img id="Bars" src="img/black_bars.png">
+  </div>
+  <div class="LearnMoreButton">
+    <a href="test.html">
+      <button type="button" onmouseover="onHover()" onmouseleave="onLeave()">Learn More</button>
+    </a>
+  </div>
   <script src="js/vendor/modernizr-3.11.2.min.js"></script>
   <script src="js/plugins.js"></script>
   <script src="js/main.js"></script>
+  <script>
+    function clearInput() {
+      if(document.getElementById("Input").value === "type here..."){
+        document.getElementById("Input").value = "";
+      }
+    }
 
+    function onHover() {
+      document.getElementById("Bars").src = "/img/rainbow_bars.png"
+    }
+
+    function onLeave() {
+      document.getElementById("Bars").src = "/img/black_bars.png"
+    }
+
+  </script>
 </body>
 
 </html>
