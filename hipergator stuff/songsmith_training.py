@@ -19,30 +19,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-# In[ ]:
 
-
+device = torch.device("cpu")
 if torch.cuda.is_available():
   device = torch.device("cuda")
 else:
   device = torch.device("cpu")
 
 
-# In[3]:
-
 
 path = 'data'
 
-
-# In[4]:
 
 
 files = os.listdir(path)
 print(len(files))
 #print(files[:5])
 
-
-# In[5]:
 
 
 songs = []
@@ -58,9 +51,6 @@ for file in files:
 # third list = words of the song
 # fourth list = syllables of the song
 #songs
-
-
-# In[6]:
 
 
 # reformat songs to be more readable
@@ -81,9 +71,6 @@ for s in songs:
     songs_reformatted.append(s_reformatted)
 songs = songs_reformatted
 #songs # songs are now [pitch (MIDI), duration, rest duration, word, syllable]
-
-
-# In[7]:
 
 
 # build the vocabulary
@@ -113,8 +100,6 @@ for s in songs:
 #print(len(syll_vocab))
 
 
-# In[8]:
-
 
 # encode the words and syllables 
 for s in songs:
@@ -123,8 +108,6 @@ for s in songs:
         note[4] = syll_vocab.index(note[4]) 
 #songs
 
-
-# In[9]:
 
 
 # do the same thing as the paper and sample a random 20 note melody from each song
@@ -145,9 +128,6 @@ for s in songs:
 #melodies
 
 
-# In[10]:
-
-
 # turn the melodies into tensors
 temp = []
 for m in melodies:
@@ -157,8 +137,6 @@ melodies = temp
 print(len(melodies))
 #melodies # each melody is now a tensor
 
-
-# In[11]:
 
 
 class MelodyDataset(data.Dataset):
@@ -198,18 +176,13 @@ class MelodyDataset(data.Dataset):
         
 
 
-# In[12]:
-
-
 dataset = MelodyDataset(melodies, word_vocab, syll_vocab)
-dataloader = data.DataLoader(dataset, batch_size=2, shuffle=True, drop_last=True)
+dataloader = data.DataLoader(dataset, batch_size=2, shuffle=True, drop_last=True, pin_memory = False)
 #for batch in dataloader:
     #print(batch.shape)
     #print(batch[0])
 dataset[0]
 
-
-# In[13]:
 
 
 class PositionalEncoding(nn.Module):
@@ -231,8 +204,8 @@ class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
-
-        pe = torch.zeros(max_len, d_model)
+        device = torch.device("cuda")
+        pe = torch.zeros(max_len, d_model).to(device)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
@@ -258,14 +231,13 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-# In[14]:
-
 
 # input: sequence of {random noise, word, syllable}
 # output: one sequence of {MIDI, duration, rest duration, word, syllable}
 class Generator(nn.Module):
     def __init__(self, unembedded_input_size, word_vocab_size, syll_vocab_size, embed_size = 10):
         super(Generator, self).__init__()
+        device = torch.device("cuda")
         self.unembedded_input_size = unembedded_input_size
         size_wo_lyrics = unembedded_input_size - 2
         self.embedded_input_size = size_wo_lyrics + embed_size * 2
@@ -284,8 +256,8 @@ class Generator(nn.Module):
             batch_first=True
             )
 
-        self.norm = nn.LayerNorm(self.embedded_input_size)
-        self.encoder = nn.TransformerEncoder(encoder_layers, num_layers=4, norm=self.norm)
+        self.norm = nn.LayerNorm(self.embedded_input_size).to(device)
+        self.encoder = nn.TransformerEncoder(encoder_layers, num_layers=4, norm=self.norm).to(device)
 
         # need linear layer to match input sizes for cross-attention in decoder
         self.encoder_out = nn.Linear(self.embedded_input_size, 3) 
@@ -298,11 +270,12 @@ class Generator(nn.Module):
             batch_first=True
             )
         
-        self.decoder = nn.TransformerDecoder(decoder_layers, num_layers=4)
+        self.decoder = nn.TransformerDecoder(decoder_layers, num_layers=4).to(device)
 
         self.init_weights()
 
     def forward(self, src):
+        device = torch.device("cuda")
         batch_size = src.shape[0]
         seq_len = src.shape[1]
 
@@ -313,10 +286,10 @@ class Generator(nn.Module):
         memory = self.encoder_out(memory)
 
         # generate a melody with same seq_len as src
-        tgt = torch.zeros((batch_size, 1, 3)) # start with zero note 
+        tgt = torch.zeros((batch_size, 1, 3)).to(device) # start with zero note 
         for i in range(seq_len - 1): # -1 cause we already have 0 note
-            tgt_mask = nn.Transformer.generate_square_subsequent_mask(tgt.shape[1])
-            output = self.decoder(tgt, memory, tgt_mask)
+            tgt_mask = nn.Transformer.generate_square_subsequent_mask(tgt.shape[1]).to(device)
+            output = self.decoder(tgt, memory, tgt_mask).to(device)
             output = output[:, -1] # extracts the inference because the output is formatted weirdly 
             output = output.view(batch_size, 1, -1) # reshapes output to be batch friendly
             tgt = torch.cat((tgt, output), dim=1)
@@ -360,47 +333,6 @@ class Generator(nn.Module):
         nn.init.uniform_(self.syll_embedding.weight, -initrange, initrange)
         nn.init.zeros_(self.encoder_out.bias)
         nn.init.uniform_(self.encoder_out.weight, -initrange, initrange)
-        
-
-
-# In[15]:
-
-
-example_gen = Generator(6, dataset.get_word_vocab_size(), dataset.get_syll_vocab_size())
-
-
-# In[16]:
-
-
-batch_size = 2
-seq_len = 22
-
-
-# In[17]:
-
-
-batch = list(dataloader)[0]
-batch.shape
-
-noise = torch.normal(0, 1, size=(batch_size ,seq_len, 4), device=device)
-
-words = batch[:, :, 3].reshape(batch_size, seq_len, 1)
-syllables = batch[:, :, 4].reshape(batch_size, seq_len, 1)
-
-src = torch.cat((noise, words), dim=2)
-src = torch.cat((src, syllables), dim=2)
-
-src.shape, src
-
-
-# In[18]:
-
-
-tgt = example_gen(src)
-tgt.shape, tgt
-
-
-# In[19]:
 
 
 # input: a melody example formatted as {MIDI, duration, rest duration, word, syllable}
@@ -478,29 +410,21 @@ class Discriminator(nn.Module):
         nn.init.zeros_(self.encoder_out.bias)
         nn.init.uniform_(self.encoder_out.weight, -initrange, initrange)
         
+Gen = Generator(6, dataset.get_word_vocab_size(), dataset.get_syll_vocab_size())
 
+Disc = Discriminator(5, dataset.get_word_vocab_size(), dataset.get_syll_vocab_size())
 
-# In[20]:
-
-
-example_dis = Discriminator(5, dataset.get_word_vocab_size(), dataset.get_syll_vocab_size())
-
-
-# In[28]:
-
-
-
-Gen = Generator(6, dataset.get_word_vocab_size(), dataset.get_syll_vocab_size()).to(device)
-
-Disc = Discriminator(5, dataset.get_word_vocab_size(), dataset.get_syll_vocab_size()).to(device)
-
+ngpu = torch.cuda.device_count()
 if(device.type == 'cuda') and (ngpu > 1):
     Gen = nn.DataParallel(Gen, list(range(ngpu)))
     Disc = nn.DataParallel(Disc, list(range(ngpu)))
 
-gen_learn_rate = 0.0005
-disc_learn_rate = 0.0005
-num_epochs = 7500
+Gen.to(device)
+Disc.to(device)
+
+gen_learn_rate = 0.05
+disc_learn_rate = 0.05
+num_epochs = 1000
 
 Gen_Optim = torch.optim.Adam(Gen.parameters(), lr = gen_learn_rate)
 Disc_Optim = torch.optim.Adam(Disc.parameters(), lr = disc_learn_rate)
@@ -512,21 +436,13 @@ batch = list(dataloader)[0]
 batch.shape
 
 
-# In[29]:
-
-
 import matplotlib.pyplot as plt
-
-
-# In[30]:
 
 
 def train(train_data, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, train_steps_D, train_steps_G):
     criterion = nn.BCELoss() # Make this an input param so we can change loss function
     #TODO: default values for parameters
-    batch = list(dataloader)[0] 
-
-
+    batch = list(dataloader)[0].to(device)
 
     noise = torch.normal(0, 1, size=(batch_size ,seq_len, 4), device=device)
 
@@ -537,6 +453,7 @@ def train(train_data, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, trai
     src = torch.cat((src, syllables), dim=2)
     loss_G = []
     loss_D = []
+    print("Training started!")
     for epoch in range(num_epochs):
 
 
@@ -548,7 +465,7 @@ def train(train_data, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, trai
         total_D_Loss = 0
         for num_steps_D, data in enumerate(train_data, 0):
 
-            fake_examples = Gen(src).detach()
+            fake_examples = Gen(src.to(device)).detach()
             fake_predictions = Disc(fake_examples)
             fake_targets = torch.zeros(fake_predictions.shape).to(device) # want discrminiator to predict fake
             fake_D_loss = criterion(fake_predictions, fake_targets)
@@ -556,8 +473,8 @@ def train(train_data, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, trai
 
             #train using real data from the batch
             #data should be dataloader iterator
-            real_D_predictions = Disc(data)
-            real_D_target = torch.ones(real_D_predictions.shape)
+            real_D_predictions = Disc(data.to(device))
+            real_D_target = torch.ones(real_D_predictions.shape).to(device)
             real_D_target = real_D_target.to(device)
             real_D_loss = criterion(real_D_predictions, real_D_target)
             real_D_loss.backward
@@ -572,8 +489,6 @@ def train(train_data, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, trai
         loss_D.append((total_D_Loss))
 
         #print("Disc loss: {}".format(total_D_Loss))
-
-
         total_G_Loss = 0
         for num_steps_G, data in enumerate(train_data, 0):
             # train the Generator
@@ -595,9 +510,21 @@ def train(train_data, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, trai
 
         loss_G.append((total_G_Loss))
 	
-    if epoch % 500 == 0:
-        torch.save(Gen, "GenModel_{}.pt".format(epoch))
-        torch.save(Disc, "DiscModel_{}.pt".format(epoch))
+        if epoch % 50 == 0:
+            #torch.save(Gen, "GenModel_{}.pt".format(epoch))
+            torch.save({'epoch': epoch,
+                'model_state_dict': Gen.state_dict(),
+                'optimizer_state_dict': Gen_Optim.state_dict(),
+                'loss': criterion}, 
+                '/blue/cis4914/transfer/models/gen.pth')
+
+            #torch.save(Disc, "DiscModel_{}.pt".format(epoch))
+            torch.save({'epoch': epoch,
+                'model_state_dict': Disc.state_dict(),
+                'optimizer_state_dict': Disc_Optim.state_dict(),
+                'loss': criterion}, 
+                '/blue/cis4914/transfer/models/disc.pth')
+    
 
     plt.title("DiscLoss")
     plt.xlabel("epoch")
