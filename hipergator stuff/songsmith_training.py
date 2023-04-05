@@ -80,7 +80,7 @@ word_vocab = []
 syll_vocab_size = 0
 syll_vocab = []
 
-# add start and end tokens. <START> = 1 <END> = 2 in encoding
+# add start and end tokens. <START> = 0 <END> = 1 in encoding
 word_vocab.append("<START>")
 word_vocab.append("<END>")
 
@@ -88,6 +88,9 @@ syll_vocab.append("<START>")
 syll_vocab.append("<END>")
 
 for s in songs:
+    # add start and end tokens for each song
+    s.insert(0,[0,0,0,"<START>", "<START>"]) 
+    s.append([0,0,0,"<END>", "<END>"]) 
     for note in s:
         if note[3] not in word_vocab:
             word_vocab.append(note[3])
@@ -115,13 +118,10 @@ melodies = []
 for s in songs:
     #TODO: some songs have less than 20 notes so this breaks!!
     #added loop to fix 
-    if len(s) < 22:
+    if len(s) < 20:
         continue
     idx = random.randint( 0, (len(s) - 1 - 20))
     m = s[idx:idx + 20]
-
-    m.insert(0, [0,0,0,1,1]) # add start token
-    m.append([0,0,0,2,2]) # add end token
 
     melodies.append(m)
 
@@ -134,10 +134,7 @@ for m in melodies:
     m_tensor = torch.tensor(m).to(device)
     temp.append(m_tensor)
 melodies = temp
-print(len(melodies))
-#melodies # each melody is now a tensor
-
-
+print(len(melodies)) # each melody is now a tensor
 
 class MelodyDataset(data.Dataset):
     def __init__(self, melodies, word_vocab, syll_vocab):
@@ -170,20 +167,6 @@ class MelodyDataset(data.Dataset):
     
     def int2syll(self, idx):
         return syll_vocab[idx]
-    
-    #TODO: not implemented
-    # def gen_train_data():
-        
-
-
-dataset = MelodyDataset(melodies, word_vocab, syll_vocab)
-dataloader = data.DataLoader(dataset, batch_size=2, shuffle=True, drop_last=True, pin_memory = False)
-#for batch in dataloader:
-    #print(batch.shape)
-    #print(batch[0])
-dataset[0]
-
-
 
 class PositionalEncoding(nn.Module):
     r"""Inject some information about the relative or absolute position of the tokens in the sequence.
@@ -229,7 +212,6 @@ class PositionalEncoding(nn.Module):
         
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
-
 
 
 # input: sequence of {random noise, word, syllable}
@@ -409,9 +391,14 @@ class Discriminator(nn.Module):
         nn.init.uniform_(self.syll_embedding.weight, -initrange, initrange)
         nn.init.zeros_(self.encoder_out.bias)
         nn.init.uniform_(self.encoder_out.weight, -initrange, initrange)
-        
-Gen = Generator(6, dataset.get_word_vocab_size(), dataset.get_syll_vocab_size())
 
+batch_size = 20
+seq_len = 20
+
+dataset = MelodyDataset(melodies, word_vocab, syll_vocab)
+dataloader = data.DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True, pin_memory = False)
+
+Gen = Generator(6, dataset.get_word_vocab_size(), dataset.get_syll_vocab_size())
 Disc = Discriminator(5, dataset.get_word_vocab_size(), dataset.get_syll_vocab_size())
 
 ngpu = torch.cuda.device_count()
@@ -429,41 +416,33 @@ num_epochs = 1000
 Gen_Optim = torch.optim.Adam(Gen.parameters(), lr = gen_learn_rate)
 Disc_Optim = torch.optim.Adam(Disc.parameters(), lr = disc_learn_rate)
 
-batch_size = 2
-seq_len = 22
-
-batch = list(dataloader)[0]
-batch.shape
-
-
 import matplotlib.pyplot as plt
 
+def make_noise(batch, batch_size, seq_len):
+        noise = torch.normal(0, 1, size=(batch_size, seq_len, 4), device=device)
 
-def train(train_data, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, train_steps_D, train_steps_G):
+        words = batch[:, :, 3].reshape(batch_size, seq_len, 1)
+        syllables = batch[:, :, 4].reshape(batch_size, seq_len, 1)
+
+        noise = torch.cat((noise, words), dim=2)
+        noise = torch.cat((noise, syllables), dim=2)
+
+        return noise
+
+
+def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, train_steps_D, train_steps_G):
     criterion = nn.BCELoss() # Make this an input param so we can change loss function
     #TODO: default values for parameters
-    batch = list(dataloader)[0].to(device)
-
-    noise = torch.normal(0, 1, size=(batch_size ,seq_len, 4), device=device)
-
-    words = batch[:, :, 3].reshape(batch_size, seq_len, 1)
-    syllables = batch[:, :, 4].reshape(batch_size, seq_len, 1)
-
-    src = torch.cat((noise, words), dim=2)
-    src = torch.cat((src, syllables), dim=2)
     loss_G = []
     loss_D = []
     print("Training started!")
     for epoch in range(num_epochs):
-
-
         Gen.train()
         Disc.train()
-
-        #need to make training data
-            # train the discriminator
+        # train the discriminator
         total_D_Loss = 0
-        for num_steps_D, data in enumerate(train_data, 0):
+        for num_steps_D, batch in enumerate(dataloader, 0):
+            src = make_noise(batch, batch_size, seq_len)
 
             fake_examples = Gen(src.to(device)).detach()
             fake_predictions = Disc(fake_examples)
@@ -473,7 +452,7 @@ def train(train_data, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, trai
 
             #train using real data from the batch
             #data should be dataloader iterator
-            real_D_predictions = Disc(data.to(device))
+            real_D_predictions = Disc(batch.to(device))
             real_D_target = torch.ones(real_D_predictions.shape).to(device)
             real_D_target = real_D_target.to(device)
             real_D_loss = criterion(real_D_predictions, real_D_target)
@@ -490,9 +469,11 @@ def train(train_data, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, trai
 
         #print("Disc loss: {}".format(total_D_Loss))
         total_G_Loss = 0
-        for num_steps_G, data in enumerate(train_data, 0):
+        for num_steps_G, batch in enumerate(dataloader, 0):
             # train the Generator
             Gen_Optim.zero_grad()
+
+            src = make_noise(batch, batch_size, seq_len)
 
             G_examples = Gen(src)
             D_examples = Disc(G_examples)
@@ -541,4 +522,4 @@ def train(train_data, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, trai
     torch.save(Gen, "GenModel.pt")
     torch.save(Disc, "DiscModel.pt")
 
-train(dataloader, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, 5, 5)
+train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, 5, 5)
