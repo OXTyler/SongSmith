@@ -118,7 +118,7 @@ melodies = []
 for s in songs:
     #TODO: some songs have less than 20 notes so this breaks!!
     #added loop to fix 
-    if len(s) < 20:
+    if len(s) <= 20:
         continue
     idx = random.randint( 0, (len(s) - 1 - 20))
     m = s[idx:idx + 20]
