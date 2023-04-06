@@ -392,7 +392,7 @@ class Discriminator(nn.Module):
         nn.init.zeros_(self.encoder_out.bias)
         nn.init.uniform_(self.encoder_out.weight, -initrange, initrange)
 
-batch_size = 20
+batch_size = 32
 seq_len = 20
 
 dataset = MelodyDataset(melodies, word_vocab, syll_vocab)
@@ -409,9 +409,9 @@ if(device.type == 'cuda') and (ngpu > 1):
 Gen.to(device)
 Disc.to(device)
 
-gen_learn_rate = 0.05
-disc_learn_rate = 0.05
-num_epochs = 1000
+gen_learn_rate = 0.1
+disc_learn_rate = 0.1
+num_epochs = 50
 
 Gen_Optim = torch.optim.Adam(Gen.parameters(), lr = gen_learn_rate)
 Disc_Optim = torch.optim.Adam(Disc.parameters(), lr = disc_learn_rate)
@@ -491,21 +491,10 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
 
         loss_G.append((total_G_Loss))
 	
-        if epoch % 50 == 0:
-            #torch.save(Gen, "GenModel_{}.pt".format(epoch))
-            torch.save({'epoch': epoch,
-                'model_state_dict': Gen.state_dict(),
-                'optimizer_state_dict': Gen_Optim.state_dict(),
-                'loss': criterion}, 
-                '/blue/cis4914/transfer/models/gen.pth')
+        if epoch % 10 == 0:
+            torch.save(Gen, "models/GenModel_{}.pt".format(epoch))
+            torch.save(Disc, "models/DiscModel_{}.pt".format(epoch))
 
-            #torch.save(Disc, "DiscModel_{}.pt".format(epoch))
-            torch.save({'epoch': epoch,
-                'model_state_dict': Disc.state_dict(),
-                'optimizer_state_dict': Disc_Optim.state_dict(),
-                'loss': criterion}, 
-                '/blue/cis4914/transfer/models/disc.pth')
-    
 
     plt.title("DiscLoss")
     plt.xlabel("epoch")
@@ -522,4 +511,4 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
     torch.save(Gen, "GenModel.pt")
     torch.save(Disc, "DiscModel.pt")
 
-train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, 5, 5)
+train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, len(dataloader), len(dataloader))
