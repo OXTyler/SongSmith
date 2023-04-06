@@ -441,14 +441,18 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
         Disc.train()
         # train the discriminator
         total_D_Loss = 0
-        for num_steps_D, batch in enumerate(dataloader, 0):
+        total_G_Loss = 0
+        for i, batch in enumerate(dataloader, 0):
+
+            #Discriminator training
+            Disc_Optim.zero_grad() #not sure if it should be optim
+
             src = make_noise(batch, batch_size, seq_len)
 
             fake_examples = Gen(src.to(device)).detach()
             fake_predictions = Disc(fake_examples)
             fake_targets = torch.zeros(fake_predictions.shape).to(device) # want discrminiator to predict fake
             fake_D_loss = criterion(fake_predictions, fake_targets)
-            fake_D_loss.backward() 
 
             #train using real data from the batch
             #data should be dataloader iterator
@@ -456,22 +460,14 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
             real_D_target = torch.ones(real_D_predictions.shape).to(device)
             real_D_target = real_D_target.to(device)
             real_D_loss = criterion(real_D_predictions, real_D_target)
-            real_D_loss.backward
 
-            Disc_Optim.step
+            
             total_D_Loss += ((real_D_loss.item() + fake_D_loss.item())/2)
-            total_D_Loss
+            total_D_Loss.backward()
+            Disc_Optim.step()
 
-            if num_steps_D == train_steps_D:
-                break
-
-        loss_D.append((total_D_Loss))
-
-        #print("Disc loss: {}".format(total_D_Loss))
-        total_G_Loss = 0
-        for num_steps_G, batch in enumerate(dataloader, 0):
-            # train the Generator
-            Gen_Optim.zero_grad()
+            #Generator training
+            Gen_Optim.zero_grad() #not sure if it should be optim
 
             src = make_noise(batch, batch_size, seq_len)
 
@@ -486,12 +482,11 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
 
             total_G_Loss += fake_G_loss.item()
 
-            if num_steps_G == train_steps_G:
-                break
 
+        loss_D.append((total_D_Loss))
         loss_G.append((total_G_Loss))
 	
-        if epoch % 10 == 0:
+        if epoch % 5 == 0:
             torch.save(Gen, "models/GenModel_{}.pt".format(epoch))
             torch.save(Disc, "models/DiscModel_{}.pt".format(epoch))
 
