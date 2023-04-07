@@ -392,7 +392,7 @@ class Discriminator(nn.Module):
         nn.init.zeros_(self.encoder_out.bias)
         nn.init.uniform_(self.encoder_out.weight, -initrange, initrange)
 
-batch_size = 32
+batch_size = 128
 seq_len = 20
 
 dataset = MelodyDataset(melodies, word_vocab, syll_vocab)
@@ -409,8 +409,8 @@ if(device.type == 'cuda') and (ngpu > 1):
 Gen.to(device)
 Disc.to(device)
 
-gen_learn_rate = 0.1
-disc_learn_rate = 0.1
+gen_learn_rate = 0.04
+disc_learn_rate = 0.04
 num_epochs = 50
 
 Gen_Optim = torch.optim.Adam(Gen.parameters(), lr = gen_learn_rate)
@@ -461,26 +461,27 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
             real_D_target = real_D_target.to(device)
             real_D_loss = criterion(real_D_predictions, real_D_target)
 
+            D_loss = ((real_D_loss + fake_D_loss)/2)
             
-            total_D_Loss += ((real_D_loss.item() + fake_D_loss.item())/2)
-            total_D_Loss.backward()
+            D_loss.backward()
             Disc_Optim.step()
+            
+            total_D_Loss += D_loss.item()
 
             #Generator training
             Gen_Optim.zero_grad() #not sure if it should be optim
 
             src = make_noise(batch, batch_size, seq_len)
 
-            G_examples = Gen(src)
-            D_examples = Disc(G_examples)
-            G_target = torch.ones(D_examples.shape)
-            G_target = G_target.to(device)
-            fake_G_loss = criterion(D_examples, G_target)
+            fake_examples = Gen(src)
+            D_predictions = Disc(fake_examples)
+            D_targets = torch.ones(D_predictions.shape).to(device)
+            G_loss = criterion(D_predictions, D_targets)
 
-            fake_G_loss.backward()
+            G_loss.backward()
             Gen_Optim.step()
 
-            total_G_Loss += fake_G_loss.item()
+            total_G_Loss += G_loss.item()
 
 
         loss_D.append((total_D_Loss))
@@ -491,16 +492,12 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
             torch.save(Disc, "models/DiscModel_{}.pt".format(epoch))
 
 
-    plt.title("DiscLoss")
+    plt.title("Loss")
     plt.xlabel("epoch")
     plt.ylabel("loss")
-    plt.plot(loss_D, color="red")
-    plt.savefig("DiscLoss.png")
+    plt.plot(loss_D, color="orange")
     plt.show()
-    plt.title("GenLoss")
-    plt.xlabel("epoch")
-    plt.ylabel("loss")
-    plt.plot(loss_G, color="red")
+    plt.plot(loss_G, color="blue")
     plt.savefig("GenLoss.png")
     plt.show()
     torch.save(Gen, "GenModel.pt")
