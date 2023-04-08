@@ -344,7 +344,6 @@ class Discriminator(nn.Module):
         self.encoder = nn.TransformerEncoder(encoder_layers, num_layers=4, norm=self.norm)
     
         self.encoder_out = nn.Linear(self.embedded_input_size, 1)
-        self.sigmoid = nn.Sigmoid()
 
         self.init_weights()
 
@@ -357,7 +356,6 @@ class Discriminator(nn.Module):
         # but it makes the shapes work out and outputs sensible numbers upon init so...
         output = output[:, 0] # just takes first of every sequence
         output = self.encoder_out(output)
-        output = self.sigmoid(output)
         return output
  
     # returns X but with the words and syllables embedded and positional encoded
@@ -409,9 +407,9 @@ if(device.type == 'cuda') and (ngpu > 1):
 Gen.to(device)
 Disc.to(device)
 
-gen_learn_rate = 0.0004
-disc_learn_rate = 0.004
-num_epochs = 80
+gen_learn_rate = 0.04
+disc_learn_rate = 0.4
+num_epochs = 15
 
 Gen_Optim = torch.optim.Adam(Gen.parameters(), lr = gen_learn_rate)
 Disc_Optim = torch.optim.Adam(Disc.parameters(), lr = disc_learn_rate)
@@ -431,7 +429,7 @@ def make_noise(batch, batch_size, seq_len):
 
 
 def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, train_steps_D, train_steps_G):
-    criterion = nn.BCELoss() # Make this an input param so we can change loss function
+    criterion = nn.BCEWithLogitsLoss() # Make this an input param so we can change loss function
     #TODO: default values for parameters
     loss_G = []
     loss_D = []
@@ -484,20 +482,21 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
             total_G_Loss += G_loss.item()
 
 
-        loss_D.append((total_D_Loss))
-        loss_G.append((total_G_Loss))
+        loss_D.append((total_D_Loss)/len(dataloader))
+        loss_G.append((total_G_Loss)/len(dataloader))
 	
-        if epoch % 10 == 0:
+        if epoch % 3 == 0:
             torch.save(Gen, "models/GenModel_{}.pt".format(epoch))
             torch.save(Disc, "models/DiscModel_{}.pt".format(epoch))
 
 
     plt.title("Loss")
-    plt.xlabel("epoch")
-    plt.ylabel("loss")
-    plt.plot(loss_D, color="orange")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.plot(loss_D, color="orange", label = "Discriminator")
     plt.show()
-    plt.plot(loss_G, color="blue")
+    plt.plot(loss_G, color="blue", label = "Generator")
+    plt.legend(loc = "upper left")
     plt.savefig("GenLoss.png")
     plt.show()
     torch.save(Gen, "GenModel.pt")
