@@ -392,7 +392,7 @@ class Discriminator(nn.Module):
         nn.init.zeros_(self.encoder_out.bias)
         nn.init.uniform_(self.encoder_out.weight, -initrange, initrange)
 
-batch_size = 128
+batch_size = 64
 seq_len = 20
 
 dataset = MelodyDataset(melodies, word_vocab, syll_vocab)
@@ -409,9 +409,9 @@ if(device.type == 'cuda') and (ngpu > 1):
 Gen.to(device)
 Disc.to(device)
 
-gen_learn_rate = 0.04
-disc_learn_rate = 0.04
-num_epochs = 50
+gen_learn_rate = 0.0004
+disc_learn_rate = 0.004
+num_epochs = 80
 
 Gen_Optim = torch.optim.Adam(Gen.parameters(), lr = gen_learn_rate)
 Disc_Optim = torch.optim.Adam(Disc.parameters(), lr = disc_learn_rate)
@@ -487,7 +487,7 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
         loss_D.append((total_D_Loss))
         loss_G.append((total_G_Loss))
 	
-        if epoch % 5 == 0:
+        if epoch % 10 == 0:
             torch.save(Gen, "models/GenModel_{}.pt".format(epoch))
             torch.save(Disc, "models/DiscModel_{}.pt".format(epoch))
 
