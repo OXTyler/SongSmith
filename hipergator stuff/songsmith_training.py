@@ -429,6 +429,7 @@ def make_noise(batch, batch_size, seq_len):
 
 
 def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, train_steps_D, train_steps_G):
+    
     criterion = nn.BCEWithLogitsLoss() # Make this an input param so we can change loss function
     #TODO: default values for parameters
     loss_G = []
@@ -463,7 +464,7 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
             
             D_loss.backward()
             Disc_Optim.step()
-            
+            min_D_Loss = min(D_loss.item(), min_D_Loss)
             total_D_Loss += D_loss.item()
 
             #Generator training
@@ -489,7 +490,11 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
             torch.save(Gen, "models/GenModel_{}.pt".format(epoch))
             torch.save(Disc, "models/DiscModel_{}.pt".format(epoch))
 
+    import matplotlib.colors as colors
 
+    norm = colors.Normalize(0,1)
+    norm(loss_D)
+    norm(loss_G)
     plt.title("Loss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")

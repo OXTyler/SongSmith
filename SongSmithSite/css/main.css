@@ -16,7 +16,14 @@ html {
   font-size: 1em;
   line-height: 1.4;
   overflow: hidden;
+  background-image: url("/img/background.png");
+  background-size: cover;
+  background-repeat: no-repeat;
+  width: auto;
+  height: auto;
+  z-index: 0;
 }
+
 .Homepage{
   display: grid;
 }
@@ -53,13 +60,10 @@ html {
 .GenerateButton button {
   margin-top: 700px;
   font-size: 24px;
-  font-family: "Cooper Black";
+  font-family: "Cooper Black", serif;
   background-color: #DF933B;
   border-radius: 10px;
-  padding-left: 30px;
-  padding-right: 30px;
-  padding-top: 5px;
-  padding-bottom: 5px;
+  padding: 5px 30px;
 }
 .LearnMoreButton {
   grid-row: 1;
@@ -74,13 +78,10 @@ html {
 .LearnMoreButton button {
   margin-top: 68px;
   font-size: 24px;
-  font-family: "Cooper Black";
+  font-family: "Cooper Black", serif;
   background-color: #DF933B;
   border-radius: 10px;
-  padding-left: 34px;
-  padding-right: 34px;
-  padding-top: 5px;
-  padding-bottom: 5px;
+  padding: 5px 34px;
 }
 
 .bars {
@@ -89,7 +90,7 @@ html {
   z-index: 5;
   margin-left: auto;
   margin-right: 0;
-  width: 17.25%;
+  width: 16.5%;
   height: 100%;
 }
 
@@ -104,7 +105,7 @@ html {
   margin-left: auto;
   margin-right: auto;
   width: auto;
-  z-index: 4;
+  z-index: 6;
 }
 
 .Textbox textarea {
@@ -119,19 +120,6 @@ html {
   font-size: 18px;
 }
 
-
-.Background {
-  background-size: cover;
-  background-repeat: no-repeat;
-  width: auto;
-  height: auto;
-  z-index: 0;
-}
-.Background img {
-  width: 100%;
-  height: 90%;
-
-}
 .Logo {
   margin-left: auto;
   margin-right: auto;
@@ -139,243 +127,97 @@ html {
   z-index: 5;
   margin-top: -10px;
 }
+
 .Logo img {
   scale: 80%;
 }
 
-::-moz-selection {
-  background: #b3d4fc;
-  text-shadow: none;
-}
-
-::selection {
-  background: #b3d4fc;
-  text-shadow: none;
-}
-
-/*
- * A better looking default horizontal rule
- */
-
-hr {
-  display: block;
-  height: 1px;
-  border: 0;
-  border-top: 1px solid #ccc;
-  margin: 1em 0;
-  padding: 0;
-}
-
-/*
- * Remove the gap between audio, canvas, iframes,
- * images, videos and the bottom of their containers:
- * https://github.com/h5bp/html5-boilerplate/issues/440
- */
-
-audio,
-canvas,
-iframe,
-img,
-svg,
-video {
-  vertical-align: middle;
-}
-
-/*
- * Remove default fieldset styles.
- */
-
-fieldset {
-  border: 0;
-  margin: 0;
-  padding: 0;
-}
-
-/*
- * Allow only vertical resizing of textareas.
- */
-
-textarea {
-  resize: vertical;
-}
-
-/* ==========================================================================
-   Author's custom styles
-   ========================================================================== */
-
-/* ==========================================================================
-   Helper classes
-   ========================================================================== */
-
-/*
- * Hide visually and from screen readers
- */
-
-.hidden,
-[hidden] {
-  display: none !important;
-}
-
-/*
- * Hide only visually, but have it available for screen readers:
- * https://snook.ca/archives/html_and_css/hiding-content-for-accessibility
- *
- * 1. For long content, line feeds are not interpreted as spaces and small width
- *    causes content to wrap 1 word per line:
- *    https://medium.com/@jessebeach/beware-smushed-off-screen-accessible-text-5952a4c2cbfe
- */
-
-.sr-only {
-  border: 0;
-  clip: rect(0, 0, 0, 0);
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  padding: 0;
-  position: absolute;
-  white-space: nowrap;
-  width: 1px;
-  /* 1 */
-}
-
-/*
- * Extends the .sr-only class to allow the element
- * to be focusable when navigated to via the keyboard:
- * https://www.drupal.org/node/897638
- */
-
-.sr-only.focusable:active,
-.sr-only.focusable:focus {
-  clip: auto;
-  height: auto;
-  margin: 0;
-  overflow: visible;
-  position: static;
-  white-space: inherit;
-  width: auto;
-}
-
-/*
- * Hide visually and from screen readers, but maintain layout
- */
-
-.invisible {
-  visibility: hidden;
-}
-
-/*
- * Clearfix: contain floats
- *
- * For modern browsers
- * 1. The space content is one way to avoid an Opera bug when the
- *    `contenteditable` attribute is included anywhere else in the document.
- *    Otherwise it causes space to appear at the top and bottom of elements
- *    that receive the `clearfix` class.
- * 2. The use of `table` rather than `block` is only necessary if using
- *    `:before` to contain the top-margins of child elements.
- */
-
-.clearfix::before,
-.clearfix::after {
-  content: " ";
-  display: table;
-}
-
-.clearfix::after {
-  clear: both;
-}
-
-/* ==========================================================================
-   EXAMPLE Media Queries for Responsive Design.
-   These examples override the primary ('mobile first') styles.
-   Modify as content requires.
-   ========================================================================== */
-
-@media only screen and (min-width: 35em) {
-  /* Style adjustments for viewports that meet the condition */
-}
-
-@media print,
-  (-webkit-min-device-pixel-ratio: 1.25),
-  (min-resolution: 1.25dppx),
-  (min-resolution: 120dpi) {
-  /* Style adjustments for high resolution devices */
-}
-
-/* ==========================================================================
-   Print styles.
-   Inlined to avoid the additional HTTP request:
-   https://www.phpied.com/delay-loading-your-print-css/
-   ========================================================================== */
-
-@media print {
-  *,
-  *::before,
-  *::after {
-    background: #fff !important;
-    color: #000 !important;
-    /* Black prints faster */
-    box-shadow: none !important;
-    text-shadow: none !important;
+@media screen and (max-width: 500px) {
+  html {
+    color: #222;
+    font-size: 1em;
+    line-height: 1.4;
+    overflow: hidden;
+    background-image: url("/img/background.png");
+    background-size: 500px, 1000px;
+    background-repeat: no-repeat;
+    width: 500px;
+    height: 1000px;
+    z-index: 0;
   }
 
-  a,
-  a:visited {
-    text-decoration: underline;
+  .Logo {
+    margin-left: 5%;
+    margin-right: 5%;
+    width: auto;
+    z-index: 5;
+    margin-top: -10px;
+  }
+  .Logo img {
+    scale: 30%;
   }
 
-  a[href]::after {
-    content: " (" attr(href) ")";
+  .Vynl {
+    grid-row: 1;
+    grid-column: 1;
+    margin-right: 50%;
+    margin-left: 50%;
+    width: auto;
+    z-index: 3;
   }
 
-  abbr[title]::after {
-    content: " (" attr(title) ")";
+  .Vynl img{
+    margin-top: 50px;
+    scale: 100%;
   }
 
-  /*
-   * Don't show links that are fragment identifiers,
-   * or use the `javascript:` pseudo protocol
-   */
-  a[href^="#"]::after,
-  a[href^="javascript:"]::after {
-    content: "";
+  .Textbox {
+    grid-row: 1;
+    grid-column: 1;
+    margin-left: 5%;
+    margin-right: 5%;
+    width: auto;
+    z-index: 6;
+  }
+  .Textbox textarea {
+    width: 300px;
   }
 
-  pre {
-    white-space: pre-wrap !important;
+  .GenerateButton {
+    grid-row: 1;
+    grid-column: 1;
+    z-index: 5;
+    margin-left: auto;
+    margin-right: auto;
+    width: auto;
+    height: 100%;
   }
 
-  pre,
-  blockquote {
-    border: 1px solid #999;
-    page-break-inside: avoid;
+  .GenerateButton button {
+    margin-top: 700px;
+    font-size: 24px;
+    font-family: "Cooper Black", serif;
+    background-color: #DF933B;
+    border-radius: 10px;
+    padding: 5px 30px;
+  }
+  .LearnMoreButton {
+    grid-row: 1;
+    grid-column: 1;
+    z-index: 5;
+    margin-left: auto;
+    margin-right: auto;
+    width: 17.90%;
+    height: 100%;
   }
 
-  /*
-   * Printing Tables:
-   * https://web.archive.org/web/20180815150934/http://css-discuss.incutio.com/wiki/Printing_Tables
-   */
-  thead {
-    display: table-header-group;
+  .LearnMoreButton button {
+    margin-top: 740px;
+    font-size: 24px;
+    font-family: "Cooper Black", serif;
+    background-color: #DF933B;
+    border-radius: 10px;
+    padding: 5px 34px;
   }
-
-  tr,
-  img {
-    page-break-inside: avoid;
-  }
-
-  p,
-  h2,
-  h3 {
-    orphans: 3;
-    widows: 3;
-  }
-
-  h2,
-  h3 {
-    page-break-after: avoid;
-  }
-
 
 }
-

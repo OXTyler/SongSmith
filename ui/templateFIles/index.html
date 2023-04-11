@@ -1,18 +1,65 @@
-<!--  how to use css in python_ flask-->
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html class="no-js" lang="">
+
 <head>
-<!--  Load CSS in Flask with html-->
-    <link rel="stylesheet" href='/staticFiles/main.css' />
- 
-<!--  Load JavaScript in Flask with html-->
+  <meta charset="utf-8">
+  <title></title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta property="og:title" content="">
+  <meta property="og:type" content="">
+  <meta property="og:url" content="">
+  <meta property="og:image" content="">
+
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="apple-touch-icon" href="icon.png">
+  <!-- Place favicon.ico in the root directory -->
+
+  <link rel="stylesheet" href="{{ url_for('static', filename= 'css/normalize.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static',    filename='css/main.css') }}">
+
+  <meta name="theme-color" content="#fafafa">
+</head>
+<body class="Homepage">
+  <div class="Logo">
+    <img src="{{ url_for('static',    filename='/img/Logo.png') }}">
+  </div>
+  <div class="Textbox">
+    <textarea id="Input" onclick="clearInput()">type here...</textarea>
+  </div>
+  <div class="Vynl">
+    <img src="{{ url_for('static',    filename='/img/vynl.png') }}">
+  </div>
+  <div class="GenerateButton">
+    <a href="/test">
+      <button type="button">Generate</button>
+    </a>
+  </div>
+  <div class="bars">
+    <img id="Bars" src="{{ url_for('static',    filename='img/black_bars.png') }}">
+  </div>
+  <div class="LearnMoreButton">
+    <a href="info_page">
+      <button type="button" onmouseover="onHover()" onmouseleave="onLeave()">Learn More</button>
+    </a>
+  </div>
   <script>
-    alert("Page has been loaded successfully")
+    function clearInput() {
+      if(document.getElementById("Input").value === "type here..."){
+        document.getElementById("Input").value = "";
+      }
+    }
+
+    function onHover() {
+      document.getElementById("Bars").src = "{{ url_for('static',    filename='/img/rainbow_bars.png') }}"
+    }
+
+    function onLeave() {
+      document.getElementById("Bars").src = "{{ url_for('static',    filename='img/black_bars.png') }}"
+    }
+
   </script>
- 
-  </head>
-  <body>
-    <h1>Flask Template tutorial</h1>
-    <p>Integrating HTML, CSS and Javascript in Flask Web Framework</p>
-  </body>
+</body>
+
 </html>
