@@ -9,48 +9,61 @@ import torchdata
 from torch.utils import data
 import matplotlib.pyplot as plt
 import numpy as np
-
+from numpy import load
 import pretty_midi
 import fluidsynth
 import music21
+import soundfile
+import pyphen
+#TODO fix whatever this is
 music21.environment.set("musescoreDirectPNGPath", "/usr/bin/musescore") # tell music21 where MuseScore is installed
 
-class MelodyDataset(data.Dataset):
-    def __init__(self, melodies, word_vocab, syll_vocab):
-       self.melodies = melodies
-       self.word_vocab = word_vocab
-       self.syll_vocab = syll_vocab
-       self.word_vocab_size = len(word_vocab)
-       self.syll_vocab_size = len(syll_vocab)
 
-    def __len__(self):
-        return len(self.melodies)
-    
-    def __getitem__(self, idx):
-        return self.melodies[idx]
+class PositionalEncoding(nn.Module):
+    r"""Inject some information about the relative or absolute position of the tokens in the sequence.
+        The positional encodings have the same dimension as the embeddings, so that the two can be summed.
+        Here, we use sine and cosine functions of different frequencies.
+    .. math:
+        \text{PosEncoder}(pos, 2i) = sin(pos/10000^(2i/d_model))
+        \text{PosEncoder}(pos, 2i+1) = cos(pos/10000^(2i/d_model))
+        \text{where pos is the word position and i is the embed idx)
+    Args:
+        d_model: the embed dim (required).
+        dropout: the dropout value (default=0.1).
+        max_len: the max. length of the incoming sequence (default=5000).
+    Examples:
+        >>> pos_encoder = PositionalEncoding(d_model)
+    """
 
-    def get_word_vocab_size(self):
-        return self.word_vocab_size
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
 
-    def get_syll_vocab_size(self):
-        return self.syll_vocab_size
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        if d_model%2 != 0:
+            pe[:, 1::2] = torch.cos(position * div_term)[:,0:-1]
+        else:
+            pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
 
-    def word2int(self, word):
-        return self.word_vocab.index(word)
-
-    def int2word(self, idx):
-        return self.word_vocab[idx]
-
-    def syll2int(self, syll):
-        return syll_vocab.index(syll) 
-    
-    def int2syll(self, idx):
-        return syll_vocab[idx]
-    
-    #TODO: not implemented
-    # def gen_train_data():
+    def forward(self, x):
+        r"""Inputs of forward function
+        Args:
+            x: the sequence fed to the positional encoder model (required).
+        Shape:
+            x: [sequence length, batch size, embed dim]
+            output: [sequence length, batch size, embed dim]
+        Examples:
+            >>> output = pos_encoder(x)
+        """
         
-
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
+ 
 class Generator(nn.Module):
     def __init__(self, unembedded_input_size, word_vocab_size, syll_vocab_size, embed_size = 10):
         super(Generator, self).__init__()
@@ -222,27 +235,58 @@ def playSong(example):
 
     return IPython.display.Audio(audio_data, rate=fs), audio_data, music21_notes
 
-import soundfile
+def create_syll(words):
+    sylls = []
+    new_words = []
+    dic = pyphen.Pyphen(lang='nl_NL')
 
-batch_size = 64
-seq_len = 20
-dataset = MelodyDataset(melodies, word_vocab, syll_vocab)
-dataloader = data.DataLoader(dataset, batch_size=64, shuffle=True, drop_last=True)
+    for word in words:
+        temp_syll = dic.inserted(word).split("-")
+        temp_words = [word] * len(temp_syll)
+        sylls.append(temp_syll)
+        new_words.append(temp_words)
+    assert len(sylls) == len(new_words), "input syllables size does not match words size"
+    return sylls, new_words
 
-batch = list(dataloader)[0]
-batch.shape
+def embed_lyrics(sylls, words):
+    word_vocab = load('./vocabs/word_vocab.npy')
+    syll_vocab = load('./vocabs/syll_vocab.npy')
 
-noise = torch.normal(0, 1, size=(batch_size ,seq_len, 4), device=device)
+    for i in range(len(sylls)):
+        try:
+            sylls[i] = syll_vocab.index(sylls[i])
+        except:
+            sylls[i] = random.randint(0, len(syll_vocab))
+        try:
+            words[i] = syll_vocab.index(words[i])
+        except:
+            words[i] = random.randint(0, len(word_vocab))
 
-words = batch[:, :, 3].reshape(batch_size, seq_len, 1)
-syllables = batch[:, :, 4].reshape(batch_size, seq_len, 1)
+    return sylls, words
 
-src = torch.cat((noise, words), dim=2)
-src = torch.cat((src, syllables), dim=2)
 
-tgt = example_gen(src)
+def create_song(lyrics):
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
 
-generated_sample = tgt[1]
-generated_sample = discretize(generated_sample)
-mp3, audio_data, music21_notes = playSong(generated_sample)
-soundfile.write('audio2.mp3', audio_data, 44100)
+    sylls, words = embed_lyrics(create_syll(lyrics), lyrics)
+
+    seq_len = len(sylls)
+    batch_size = 1
+
+    gen = torch.load("GenModel.pt", map_location=torch.device('cpu'))
+    gen = gen.module.to(device) 
+
+    noise = torch.normal(0, 1, size=(batch_size ,seq_len, 4))
+    words = words.reshape(batch_size, seq_len, 1)
+    sylls = sylls.reshape(batch_size, seq_len, 1)
+    src = torch.cat((noise, words), dim=2)
+    src = torch.cat((src, sylls), dim=2)
+
+    tgt = gen(src)
+    generated_sample = tgt[1]
+    generated_sample = discretize(generated_sample)
+    mp3, audio_data, music21_notes = playSong(generated_sample)
+    soundfile.write('audio2.mp3', audio_data, 44100)

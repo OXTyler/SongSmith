@@ -228,13 +228,13 @@ class Generator(nn.Module):
         self.word_embedding = nn.Embedding(word_vocab_size, embed_size)
         self.syll_embedding = nn.Embedding(syll_vocab_size, embed_size)
 
-        self.pos_encoder = PositionalEncoding(self.embedded_input_size, dropout = 0) # for now, no dropout cause no trust
+        self.pos_encoder = PositionalEncoding(self.embedded_input_size, dropout = 0.5)
 
         encoder_layers = nn.TransformerEncoderLayer(
             d_model = self.embedded_input_size, 
             nhead = 2,
             dim_feedforward=4,
-            dropout=0,
+            dropout=0.5,
             batch_first=True
             )
 
@@ -248,7 +248,7 @@ class Generator(nn.Module):
             d_model = 3, 
             nhead = 1,
             dim_feedforward=4,
-            dropout=0,
+            dropout=0.5,
             batch_first=True
             )
         
@@ -256,39 +256,22 @@ class Generator(nn.Module):
 
         self.init_weights()
 
-    def forward(self, src):
-        device = torch.device("cuda")
-        batch_size = src.shape[0]
-        seq_len = src.shape[1]
-
+    def forward(self, src, tgt, tgt_mask):            
         src_emb = self.embed_lyrics(src)
         src_emb = self.pos_encoder(src_emb) 
 
         memory = self.encoder(src_emb)
         memory = self.encoder_out(memory)
 
-        # generate a melody with same seq_len as src
-        tgt = torch.zeros((batch_size, 1, 3)).to(device) # start with zero note 
-        for i in range(seq_len - 1): # -1 cause we already have 0 note
-            tgt_mask = nn.Transformer.generate_square_subsequent_mask(tgt.shape[1]).to(device)
-            output = self.decoder(tgt, memory, tgt_mask).to(device)
-            output = output[:, -1] # extracts the inference because the output is formatted weirdly 
-            output = output.view(batch_size, 1, -1) # reshapes output to be batch friendly
-            tgt = torch.cat((tgt, output), dim=1)
-
-        # add the lyrics
-        words = src[:, :, self.unembedded_input_size - 2].reshape(batch_size, seq_len, 1)
-        sylls = src[:, :, self.unembedded_input_size - 1].reshape(batch_size, seq_len, 1)        
-        tgt = torch.cat((tgt, words), dim=2)
-        tgt = torch.cat((tgt, sylls), dim=2)
-
-        return tgt
+        output = self.decoder(tgt, memory, tgt_mask = tgt_mask)
+        
+        return output
     
     # returns X but with the words and syllables embedded and positional encoded
     def embed_lyrics(self, X):
         batch_size = X.shape[0]
         seq_len = X.shape[1]
-        assert X.shape[2] == self.unembedded_input_size
+        assert X.shape[2] == self.unembedded_input_size, f"expected {self.unembedded_input_size} but got {X.shape[2]}"
 
         # extract words and syllables from X
         words = X[:, :, self.unembedded_input_size - 2].long()
@@ -330,13 +313,12 @@ class Discriminator(nn.Module):
         self.word_embedding = nn.Embedding(word_vocab_size, embed_size)
         self.syll_embedding = nn.Embedding(syll_vocab_size, embed_size)
 
-        self.pos_encoder = PositionalEncoding(self.embedded_input_size, dropout = 0) # for now, no dropout cause no trust
+        self.pos_encoder = PositionalEncoding(self.embedded_input_size, dropout = 0.5) 
  
         encoder_layers = nn.TransformerEncoderLayer(
             d_model = self.embedded_input_size, 
             nhead = 3,
-            dim_feedforward=4,
-           dropout=0,
+            dropout=0.5,
             batch_first=True
             )
 
@@ -344,25 +326,28 @@ class Discriminator(nn.Module):
         self.encoder = nn.TransformerEncoder(encoder_layers, num_layers=4, norm=self.norm)
     
         self.encoder_out = nn.Linear(self.embedded_input_size, 1)
+        self.sigmoid = nn.Sigmoid()
 
         self.init_weights()
 
-    def forward(self, src):
+    def forward(self, src, src_mask=None):
+        batch_size = src.shape[0]
+        seq_len = src.shape[1]
+
         src = self.embed_lyrics(src)
         src = self.pos_encoder(src) 
-        output = self.encoder(src)
-        # transGAN paper does this (https://github.com/asarigun/TransGAN/blob/846c067b69f25f65b512e37a9bb78dba6058334c/models.py#L184)
-        # I don't know exactly why and I feel like there are better ways
-        # but it makes the shapes work out and outputs sensible numbers upon init so...
-        output = output[:, 0] # just takes first of every sequence
+
+        output = self.encoder(src, src_mask)
         output = self.encoder_out(output)
+        output = output[:,-1,:].reshape(batch_size, 1, 1)
+
         return output
- 
+    
     # returns X but with the words and syllables embedded and positional encoded
     def embed_lyrics(self, X):
         batch_size = X.shape[0]
         seq_len = X.shape[1]
-        assert X.shape[2] == self.unembedded_input_size
+        assert X.shape[2] == self.unembedded_input_size, f"expected {self.unembedded_input_size} but got {X.shape[2]}"
 
         # extract words and syllables from X
         words = X[:, :, self.unembedded_input_size - 2].long()
@@ -416,16 +401,28 @@ Disc_Optim = torch.optim.Adam(Disc.parameters(), lr = disc_learn_rate)
 
 import matplotlib.pyplot as plt
 
-def make_noise(batch, batch_size, seq_len):
+def gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach, device):
         noise = torch.normal(0, 1, size=(batch_size, seq_len, 4), device=device)
 
         words = batch[:, :, 3].reshape(batch_size, seq_len, 1)
         syllables = batch[:, :, 4].reshape(batch_size, seq_len, 1)
 
-        noise = torch.cat((noise, words), dim=2)
-        noise = torch.cat((noise, syllables), dim=2)
+        src = torch.cat((noise, words), dim=2)
+        src = torch.cat((src, syllables), dim=2)
+        src = src.to(device)
 
-        return noise
+        tgt = batch[:, :, :3].to(device)
+        tgt_mask = nn.Transformer.generate_square_subsequent_mask(tgt.shape[1]).to(device)
+
+        fake_examples = Gen(src, tgt, tgt_mask)
+
+        if (detach == True):
+            fake_examples = fake_examples.detach()
+
+        fake_examples = torch.cat((fake_examples, words), dim=2)
+        fake_examples = torch.cat((fake_examples, syllables), dim=2)
+
+        return fake_examples
 
 
 def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, train_steps_D, train_steps_G):
@@ -433,28 +430,27 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
     criterion = nn.BCEWithLogitsLoss() # Make this an input param so we can change loss function
     #TODO: default values for parameters
     loss_G = []
-    loss_D = []
+    loss_D_fake = []
+    loss_D_real = []
     print("Training started!")
     for epoch in range(num_epochs):
         Gen.train()
         Disc.train()
         # train the discriminator
-        total_D_Loss = 0
+        total_D_Loss_Fake = 0
+        total_D_Loss_Real = 0
         total_G_Loss = 0
         for i, batch in enumerate(dataloader, 0):
-
-            #Discriminator training
+            # #Discriminator training
             Disc_Optim.zero_grad() #not sure if it should be optim
 
-            src = make_noise(batch, batch_size, seq_len)
-
-            fake_examples = Gen(src.to(device)).detach()
+            fake_examples = gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach = True, device = device)
             fake_predictions = Disc(fake_examples)
             fake_targets = torch.zeros(fake_predictions.shape).to(device) # want discrminiator to predict fake
             fake_D_loss = criterion(fake_predictions, fake_targets)
 
+
             #train using real data from the batch
-            #data should be dataloader iterator
             real_D_predictions = Disc(batch.to(device))
             real_D_target = torch.ones(real_D_predictions.shape).to(device)
             real_D_target = real_D_target.to(device)
@@ -464,15 +460,12 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
             
             D_loss.backward()
             Disc_Optim.step()
-            min_D_Loss = min(D_loss.item(), min_D_Loss)
-            total_D_Loss += D_loss.item()
+            total_D_Loss_Fake += fake_D_loss.item()
+            total_D_Loss_Real += real_D_loss.item()
 
             #Generator training
             Gen_Optim.zero_grad() #not sure if it should be optim
-
-            src = make_noise(batch, batch_size, seq_len)
-
-            fake_examples = Gen(src)
+            fake_examples = gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach = False, device = device)
             D_predictions = Disc(fake_examples)
             D_targets = torch.ones(D_predictions.shape).to(device)
             G_loss = criterion(D_predictions, D_targets)
@@ -483,7 +476,8 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
             total_G_Loss += G_loss.item()
 
 
-        loss_D.append((total_D_Loss)/len(dataloader))
+        loss_D_fake.append((total_D_Loss_Fake)/len(dataloader))
+        loss_D_real.append((total_D_Loss_Real)/len(dataloader))
         loss_G.append((total_G_Loss)/len(dataloader))
 	
         if epoch % 3 == 0:
@@ -493,16 +487,17 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
     import matplotlib.colors as colors
 
     norm = colors.Normalize(0,1)
-    norm(loss_D)
+    norm(loss_D_real)
+    norm(loss_D_fake)
     norm(loss_G)
     plt.title("Loss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.plot(loss_D, color="orange", label = "Discriminator")
-    plt.show()
-    plt.plot(loss_G, color="blue", label = "Generator")
-    plt.legend(loc = "upper left")
-    plt.savefig("GenLoss.png")
+    plt.plot(loss_D_fake, color="orange", label = "d-fake")
+    plt.plot(loss_D_real, color="green", label = "d-real")
+    plt.plot(loss_G, color="blue", label = "gen")
+    plt.legend(loc = "upper right")
+    plt.savefig("Loss.png")
     plt.show()
     torch.save(Gen, "GenModel.pt")
     torch.save(Disc, "DiscModel.pt")
