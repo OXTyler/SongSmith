@@ -234,7 +234,7 @@ class Generator(nn.Module):
             d_model = self.embedded_input_size, 
             nhead = 2,
             dim_feedforward=4,
-            dropout=0,
+            dropout=0.5,
             batch_first=True
             )
 
@@ -256,17 +256,14 @@ class Generator(nn.Module):
 
         self.init_weights()
 
-    def forward(self, src, tgt, tgt_mask):
-        batch_size = src.shape[0]
-        seq_len = src.shape[1]
-            
+    def forward(self, src, tgt, tgt_mask):            
         src_emb = self.embed_lyrics(src)
         src_emb = self.pos_encoder(src_emb) 
 
         memory = self.encoder(src_emb)
         memory = self.encoder_out(memory)
 
-        output = self.decoder(tgt, memory, tgt_mask)
+        output = self.decoder(tgt, memory, tgt_mask = tgt_mask)
         
         return output
     
@@ -404,7 +401,7 @@ Disc_Optim = torch.optim.Adam(Disc.parameters(), lr = disc_learn_rate)
 
 import matplotlib.pyplot as plt
 
-def gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach):
+def gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach, device):
         noise = torch.normal(0, 1, size=(batch_size, seq_len, 4), device=device)
 
         words = batch[:, :, 3].reshape(batch_size, seq_len, 1)
@@ -447,7 +444,7 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
             # #Discriminator training
             Disc_Optim.zero_grad() #not sure if it should be optim
 
-            fake_examples = gen_fake_train_examples(Gen, batch, batch_size, seq_len, True)
+            fake_examples = gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach = True, device = device)
             fake_predictions = Disc(fake_examples)
             fake_targets = torch.zeros(fake_predictions.shape).to(device) # want discrminiator to predict fake
             fake_D_loss = criterion(fake_predictions, fake_targets)
@@ -468,7 +465,7 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
 
             #Generator training
             Gen_Optim.zero_grad() #not sure if it should be optim
-            fake_examples = gen_fake_train_examples(Gen, batch, batch_size, seq_len, False)
+            fake_examples = gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach = False, device = device)
             D_predictions = Disc(fake_examples)
             D_targets = torch.ones(D_predictions.shape).to(device)
             G_loss = criterion(D_predictions, D_targets)
@@ -483,9 +480,9 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
         loss_D_real.append((total_D_Loss_Real)/len(dataloader))
         loss_G.append((total_G_Loss)/len(dataloader))
 	
-        # if epoch % 3 == 0:
-        #     torch.save(Gen, "models/GenModel_{}.pt".format(epoch))
-        #     torch.save(Disc, "models/DiscModel_{}.pt".format(epoch))
+        if epoch % 3 == 0:
+            torch.save(Gen, "models/GenModel_{}.pt".format(epoch))
+            torch.save(Disc, "models/DiscModel_{}.pt".format(epoch))
 
     import matplotlib.colors as colors
 
