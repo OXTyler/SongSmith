@@ -11,16 +11,116 @@
   <div class="column left">
 
   </div>
-  <div class="column middle">
-    <p class="Info">
-      In order to create the music seen in this project, we use what is called machine learning, this is the same thing that many common services today use in order to learn about or create complex things that are traditionally extremely difficult for a computer to do. The way this can be thought of for our model is that you can give it some lyrics, and it will give you back the best melody it thinks goes with those lyrics.
-      <img src="{{url_for('static', filename='img/diagrams/blackbox.png')}}"><br>
-      Going into more detail, our model uses a Generative Adversarial Network, or GAN for short. While this sounds intimidating, it can be thought of as 2 models fighting against each other. During training, there is one model, the generator, that is trying its best to create music that will please the other model, the discriminator.
-      At the same time the discriminator is trying to become more picky, learning better to pick real or fake music. Every time the generator gives a new piece of music to the discriminator, it judges whether this could pass for real or not (it discriminates between real and fake music). Every time it judges it as fake, the generator learns not to make the same mistakes again, and will do better next time.
-      When it’s music passes as real, the generator learns to do things more like that.
-      <img src="{{url_for('static', filename='img/diagrams/TrainingLoop.png')}}">
-      Overall these 2 models are in opposition, the discriminator wants to be able to always know when music is real, and the generator wants to trick the discriminator by thinking their music is. The end goal of this process called training is that the generator will win, and give us music that sounds as if a real person made it.
-      This training can take a long time and a lot of data, for us to make this tool, it took 11,000 songs, as well as thousands of iterations of training, but the end result is we can now create unique music through the use of our trained model.
+  <div class="column middle" id="Info">
+    <p>
+      <h1>About SongSmith</h1>
+      SongSmith is a senior project created by 3 UF dumb dumbs, Manuel Vera, Tyler Lack, and Kevin Tram. It aims to educate and inspire prospective computer science students to pursue computer science and push its limits. We do this by developing, showing off, and examining a whatever something something cutting edge of computer science, a TransGAN neural network. The network takes in lyrics and generates a corresponding melody. 
+
+The following article is an overview breaking down how our neural networks and the basics of machine learning as we go. However, machine learning is highly based on math but math is annoying so we’re going to be skipping most of that and giving hand-wavy conceptual explanations instead. It’d be pretty cool if you read (or at least skim) it :). 
+    </p>
+    <p>
+      <h1>Machine Learning</h1>
+      Machine learning (ML) is a broad field that studies any method, aka model or network, that improves performance on a given task by emulating how humans learn, that is, incrementally by learning from mistakes. 
+      <h1>Tasks</h1>
+      Machine learning tasks aren’t defined by anything in specific but they tend to mostly be anything that we can’t solve with clearly defined step-by-step algorithms. 
+
+One of the most common tasks is called classification. It’s the task of putting things into classes or, in other words, labeling things. 
+      <img src="{{ url_for('static',    filename='/img/diagrams/classification.gif') }}">
+      Another common task is clustering. It’s the task of finding distinct groups of things or, in other words, finding clusters.
+      <img src="{{ url_for('static',    filename='/img/diagrams/clustering.gif') }}">
+      Our machine learning task is generation, making things. Specifically, our model generates a melody that goes along with the given set of lyrics.
+      <img src="{{ url_for('static',    filename='/img/diagrams/blackbox.png') }}">
+    </p>
+    <p>
+      <h1>Training</h1>
+      In machine learning, training is the process where we teach our model so it learns and improves.
+      Broadly speaking, training consists of models <br>
+      <ol>
+        <li><b>Trying:</b> doing the task</li>
+        <li><b>Checking:</b> seeing if it did the task right</li>
+        <li><b>Learning:</b> making an adjustment if it did the task badly</li>
+      </ol>
+      In our case, since we want the model to generate a melody that goes with some lyrics, training is
+      <ol>
+        <li><b>Trying:</b> looking at some lyrics and generating a melody</li>
+        <li><b>Checking:</b> seeing if the melody was any good or not</li>
+        <li><b>Learning:</b> making an adjustment if it was shit</li>
+      </ol>
+    </p>
+    <p>
+      <h1>Trying and Learning</h1>
+      The basic operation of ML models works by feeding it an input where it then performs a bunch of math computations to produce an output. Models perform those computations with adjustable internal parameters that when you change a parameter, you change the model's output.
+      <img src="{{ url_for('static', filename='/img/diagrams/TODO')}}">
+      earning then consists of making adjustments to its internal parameters to correct for a wrong output.
+      <img src="{{ url_for('static', filename='/img/diagrams/neural_net.gif')}}">
+      Thus, our model is considered trained when it has internal parameters that lead to good sounding melodies
+    </p>
+    <p>
+      <h1>Checking With GANs</h1>
+      With most other machine learning tasks, the check step is fairly simple. If we had a dog/cat image classifier, we would usually use a dataset with the answers already just for training. Then, checking if the model’s answer consists of checking if it matched. This can all also be easily automated.
+      <img src="{{ url_for('static', filename='/img/diagrams/TODO')}}">
+      But with generative modeling, how do you check if a melody sounded good or not? Are we going to listen to each and every melody and tell the model if it sounds bad? No, that sounds like waaaay too much manual labor. One solution is to adopt a Generative Adversarial Network (GAN) architecture and that’s exactly what we did.
+
+      <br><br>
+      The main point of GANs is that it introduces another neural network called a discriminator. The idea is that our model checks its melody by giving it to the discriminator and having it decide. We do this by training the discriminator to distinguish (discriminate) between real and generated melodies. So, if we had a pre-labeled dataset of real melodies (which we do), checking our model becomes just as simple as checking the cat/dog classifier, just check the source. So now with the discriminator, our model is considered trained once it consistently generates melodies that are indistinguishable from real ones, which is basically what we wanted.
+      <img src="{{ url_for('static', filename='/img/diagrams/TODO')}}">
+      That caveat with GANs is that now we have to train TWO networks AT THE SAME TIME. This makes training way more annoying than it would usually be. We’ll spare you the details but just know that it was painful.
+
+      <br><br>
+      It's important to note that the dynamics of simultaneously training these two networks is the source of the name GAN. During training, our model is trying to fool the discriminator into thinking its melodies are real. While, the discriminator is trying to figure out the imposters among the real melodies. Hence, they have adversarial motivations.
+    </p>
+    <p>
+      <h1>Working With Sequences</h1>
+      Our data is sequential which means it’s composed of an ordered list (sequence) of datapoints. Specifically, lyrics are a sequence of words and a melody is a sequence of notes. 
+      <img src="{{ url_for('static', filename='/img/diagrams/TODO')}}">
+      This is important because any model that works with sequential data must remedy two problems: 
+      <ol>
+        <li>
+          <b>the order of data points matters </b>
+          <ol>
+            why: “the car killed Bob” has a different meaning than “Bob killed the car” 
+          </ol>
+        </li>
+        <li>
+          <b>data points contextualize other data points</b>
+          <ol>
+            why: in “the green apple” “green” adds context to “apple” 
+          </ol>
+        </li>
+      </ol>
+    </p>
+    <p>
+      <h1>Transformers</h1>
+      We solved the problems of sequential modeling by using transformers. They are an exciting new(ish) architecture that has shown pretty crazy effectiveness in practice. For example, ChatGPT uses transformers (it’s the T in GPT).
+      <h2>Remembering the Order with Positional Encoding</h2>
+      Transformers solves the order problem of sequential learning with positional encoding. Basically, it does some magical math on the sequence where it somehow allows the model to keep track of the position of each datapoint. It’s honestly all math with sins and cosines everywhere. Like look at this:
+      <img src="{{ url_for('static', filename='/img/diagrams/positional_encoding.png')}}">
+      So yea, we’re pretty much gonna skip over it.
+      <h2>Contextualizing with the Attention Mechanism</h2>
+      Transformers solve the contextualization problem of sequential learning through its attention mechanism. The attention mechanism is an internal component that tries to capture how humans pay attention, by finding and considering only what’s relevant. What this translates to in machine learning terms is that with a given data point, find and give high attention to data points that are more relevant to it.
+      <img src="{{ url_for('static', filename='/img/diagrams/attention_words.png')}}">
+      <br>
+      To give you a more concrete idea, its
+      <ol>
+        <li><b>input</b> = some sequential data points</li>
+        <li><b>output</b> = for each data point $x_i$, information about what $x_i$ should pay attention to</li>
+      </ol>
+      <img src="{{ url_for('static', filename='/img/diagrams/TODO.png')}}">
+      The attention mechanism accomplishes this with another round of math computations that we are also going to skip over lol. However, the important thing is that it performs those computations with learnable internal parameters or, in other words, it learns what to pay attention to during training. This is different from positional encoding which has no parameters at all.
+    </p>
+    <p>
+      <h1>Working with Audio</h1>
+      Since our model produces music, we have to work with audio. Except, working with sound waves is really hard and we’re not that smart.
+      <img src="{{ url_for('static', filename='/img/diagrams/soundwave.png')}}">
+      So, to fix that, we decided to work with the MIDI files. Musical Instrument Digital Interface (MIDI) is a technical standard for digitally representing music across different pieces of electronic audio equipment like synthesizers, electronic instruments, and computers. It provides a consistent set of rules defining how aspects of music like notes, vibrato, and pitch bend are represented for electronic audio equipment. What’s important for us is that it allows us to represent music as numbers (which is important because machine learning is all math) without forcing us to work with actual sound waves.
+      <img src="{{ url_for('static', filename='/img/diagrams/piano.gif')}}">
+      For melodies, the other aspects that MIDI files grant us like vibrato, velocity, pitch bend, and more are irrelevant to us. All that we care about is how to represent a sequence of notes.
+      <br><br>
+      To get specific, a note is made up of a pitch and duration. Usually, pitch is represented by an octave and note name.
+      <img src="{{ url_for('static', filename='/img/diagrams/piano_keys.png')}}">
+      However, MIDI represents all those with a number from 0 to 127
+      <img src="{{ url_for('static', filename='/img/diagrams/notes.png')}}">
+      This means that our model generates a sequence of notes in the form of {pitch, duration} where pitch is a number from 0 to 127 and the duration is any number. And that’s how our model works with audio :). 
     </p>
   </div>
   <div class="column right">
