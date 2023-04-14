@@ -22,6 +22,15 @@
   <meta name="theme-color" content="#fafafa">
 </head>
 <body class="Homepage">
+  <div id="LearnMore">
+    <div class="bars">
+      <img id="Bars" src="{{ url_for('static',    filename='img/black_bars.png') }}">
+    </div>
+    <div class="LearnMoreButton">
+      <a href="info_page">
+        <button type="button" onmouseover="onHover()" onmouseleave="onLeave()">Learn More</button>
+      </a>
+    </div>
   <div class="Logo">
     <img src="{{ url_for('static',    filename='/img/Logo.png') }}">
   </div>
@@ -36,14 +45,9 @@
       <button type="button">Generate</button>
     </a>
   </div>
-  <div class="bars">
-    <img id="Bars" src="{{ url_for('static',    filename='img/black_bars.png') }}">
+
   </div>
-  <div class="LearnMoreButton">
-    <a href="info_page">
-      <button type="button" onmouseover="onHover()" onmouseleave="onLeave()">Learn More</button>
-    </a>
-  </div>
+
   <script>
     function clearInput() {
       if(document.getElementById("Input").value === "type here..."){

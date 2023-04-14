@@ -7,6 +7,17 @@ html{
   z-index: 0;
 }
 
+#GoBack{
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  font-size: 24px;
+  font-family: "Cooper Black", serif;
+  background-color: #DF933B;
+  border-radius: 10px;
+  padding: 5px 30px;
+}
+
 #Info{
   background: #D6CA9E;
   text-align: center;

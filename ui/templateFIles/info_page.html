@@ -50,7 +50,7 @@ One of the most common tasks is called classification. It’s the task of puttin
     <p>
       <h1>Trying and Learning</h1>
       The basic operation of ML models works by feeding it an input where it then performs a bunch of math computations to produce an output. Models perform those computations with adjustable internal parameters that when you change a parameter, you change the model's output.
-      <img src="{{ url_for('static', filename='/img/diagrams/TODO')}}">
+      <img src="{{ url_for('static', filename='/img/diagrams/mathbox.png')}}">
       earning then consists of making adjustments to its internal parameters to correct for a wrong output.
       <img src="{{ url_for('static', filename='/img/diagrams/neural_net.gif')}}">
       Thus, our model is considered trained when it has internal parameters that lead to good sounding melodies
@@ -58,12 +58,12 @@ One of the most common tasks is called classification. It’s the task of puttin
     <p>
       <h1>Checking With GANs</h1>
       With most other machine learning tasks, the check step is fairly simple. If we had a dog/cat image classifier, we would usually use a dataset with the answers already just for training. Then, checking if the model’s answer consists of checking if it matched. This can all also be easily automated.
-      <img src="{{ url_for('static', filename='/img/diagrams/TODO')}}">
+      <img src="{{ url_for('static', filename='/img/diagrams/wrong.gif')}}">
       But with generative modeling, how do you check if a melody sounded good or not? Are we going to listen to each and every melody and tell the model if it sounds bad? No, that sounds like waaaay too much manual labor. One solution is to adopt a Generative Adversarial Network (GAN) architecture and that’s exactly what we did.
 
       <br><br>
       The main point of GANs is that it introduces another neural network called a discriminator. The idea is that our model checks its melody by giving it to the discriminator and having it decide. We do this by training the discriminator to distinguish (discriminate) between real and generated melodies. So, if we had a pre-labeled dataset of real melodies (which we do), checking our model becomes just as simple as checking the cat/dog classifier, just check the source. So now with the discriminator, our model is considered trained once it consistently generates melodies that are indistinguishable from real ones, which is basically what we wanted.
-      <img src="{{ url_for('static', filename='/img/diagrams/TODO')}}">
+      <img src="{{ url_for('static', filename='/img/diagrams/TrainingLoop.png')}}">
       That caveat with GANs is that now we have to train TWO networks AT THE SAME TIME. This makes training way more annoying than it would usually be. We’ll spare you the details but just know that it was painful.
 
       <br><br>
@@ -72,7 +72,7 @@ One of the most common tasks is called classification. It’s the task of puttin
     <p>
       <h1>Working With Sequences</h1>
       Our data is sequential which means it’s composed of an ordered list (sequence) of datapoints. Specifically, lyrics are a sequence of words and a melody is a sequence of notes. 
-      <img src="{{ url_for('static', filename='/img/diagrams/TODO')}}">
+      <img src="{{ url_for('static', filename='/img/diagrams/seq_blackbox.png')}}">
       This is important because any model that works with sequential data must remedy two problems: 
       <ol>
         <li>
@@ -105,7 +105,7 @@ One of the most common tasks is called classification. It’s the task of puttin
         <li><b>input</b> = some sequential data points</li>
         <li><b>output</b> = for each data point $x_i$, information about what $x_i$ should pay attention to</li>
       </ol>
-      <img src="{{ url_for('static', filename='/img/diagrams/TODO.png')}}">
+      <img src="{{ url_for('static', filename='/img/diagrams/attention.gif')}}">
       The attention mechanism accomplishes this with another round of math computations that we are also going to skip over lol. However, the important thing is that it performs those computations with learnable internal parameters or, in other words, it learns what to pay attention to during training. This is different from positional encoding which has no parameters at all.
     </p>
     <p>
@@ -124,7 +124,9 @@ One of the most common tasks is called classification. It’s the task of puttin
     </p>
   </div>
   <div class="column right">
-
+    <a href="/">
+      <button id="GoBack" type="button">Go Back</button>
+    </a>
   </div>
 </div>
 </body>

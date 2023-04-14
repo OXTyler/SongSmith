@@ -12,13 +12,21 @@
 
   </div>
   <div class="column middle">
+    <div>
+      <img src="{{ url_for('static', filename='/img/logo.png')}}">
+    </div>
+    <div>
+      <img src="{{ url_for('static', filename='/img/generate/music.png')}}">
+    </div>
     <audio controls>
-]        <source src="{{ url_for('static', filename= 'audio/test.mp3') }}" type="audio/mpeg">
+       <source src="{{ url_for('static', filename= 'audio/test.mp3') }}" type="audio/mpeg">
       Your browser does not support the audio element.
-      </audio>
+    </audio>
   </div>
   <div class="column right">
-
+    <a href="/">
+      <button id="GoBack" type="button">Go Back</button>
+    </a>
   </div>
 </div>
 </body>

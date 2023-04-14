@@ -71,7 +71,7 @@ html {
   z-index: 5;
   margin-left: auto;
   margin-right: 0;
-  width: 17.90%;
+  width: 16.5%;
   height: 100%;
 }
 
@@ -90,14 +90,21 @@ html {
   z-index: 5;
   margin-left: auto;
   margin-right: 0;
-  width: 16.5%;
+  width: 15.3%;
   height: 100%;
+
 }
 
 .bars img {
-  margin-top: 20px;
+  margin-top: 22px;
   scale: 120%;
 }
+
+#LearnMore {
+  display:grid;
+  grid-template-rows: 1fr 1fr;
+}
+
 
 .Textbox {
   grid-row: 1;
