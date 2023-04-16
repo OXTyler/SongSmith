@@ -34,24 +34,25 @@
   <div class="Logo">
     <img src="{{ url_for('static',    filename='/img/Logo.png') }}">
   </div>
-  <div class="Textbox">
-    <textarea id="Input" onclick="clearInput()">type here...</textarea>
-  </div>
+
   <div class="Vynl">
     <img src="{{ url_for('static',    filename='/img/vynl.png') }}">
   </div>
-  <div class="GenerateButton">
-    <a href="/test">
-      <button type="button">Generate</button>
-    </a>
+  <div id="Input">
+    <form  action="/test" method="POST">
+      <div>
+        <textarea id="Lyrics" name="Input" onclick="clearInput()">type here...</textarea>
+      </div>
+        <button type="submit">Generate</button>
+    </form>
   </div>
 
-  </div>
+
 
   <script>
     function clearInput() {
-      if(document.getElementById("Input").value === "type here..."){
-        document.getElementById("Input").value = "";
+      if(document.getElementById("Lyrics").value === "type here..."){
+        document.getElementById("Lyrics").value = "";
       }
     }
 

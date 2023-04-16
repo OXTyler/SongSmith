@@ -11,13 +11,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy import load
 import pretty_midi
-import fluidsynth
 import music21
 import soundfile
 import pyphen
+import IPython
 #TODO fix whatever this is
-music21.environment.set("musescoreDirectPNGPath", "/usr/bin/musescore") # tell music21 where MuseScore is installed
-
+music21.environment.set("musescoreDirectPNGPath", "C:\\Users\\tyler\\OneDrive\\Documents\\Projects\\Python\\SongSmith\\bin\\musescore3.exe") # tell music21 where MuseScore is installed
 
 class PositionalEncoding(nn.Module):
     r"""Inject some information about the relative or absolute position of the tokens in the sequence.
@@ -63,7 +62,7 @@ class PositionalEncoding(nn.Module):
         
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
- 
+
 class Generator(nn.Module):
     def __init__(self, unembedded_input_size, word_vocab_size, syll_vocab_size, embed_size = 10):
         super(Generator, self).__init__()
@@ -205,6 +204,8 @@ def midi_to_note(midi: int, duration: float, syll: str):
     return note
 
 def playSong(example):
+    syll_vocab = load('./vocabs/syll_vocab.npy')
+
     pm = pretty_midi.PrettyMIDI()
     piano_program = pretty_midi.instrument_name_to_program('Acoustic Grand Piano')
     piano = pretty_midi.Instrument(program=piano_program)
@@ -217,7 +218,7 @@ def playSong(example):
         pitch = note[0].long().item()
         dur = note[1].item()
         rest_dur = note[2].item()
-        syll = dataset.int2syll(note[4].long().item())
+        syll = syll_vocab[note[4].long().item()]
 
         note = pretty_midi.Note(velocity=100, pitch = pitch, start = time + rest_dur, end = time + dur)
         time = rest_dur + time + dur
@@ -231,7 +232,7 @@ def playSong(example):
     # synthesize audio
     fs = 44100
     audio_data = pm.fluidsynth(fs)
-    audio_data
+    #audio_data
 
     return IPython.display.Audio(audio_data, rate=fs), audio_data, music21_notes
 
@@ -246,7 +247,8 @@ def create_syll(words):
         sylls.append(temp_syll)
         new_words.append(temp_words)
     assert len(sylls) == len(new_words), "input syllables size does not match words size"
-    return sylls, new_words
+    yield sylls
+    yield new_words
 
 def embed_lyrics(sylls, words):
     word_vocab = load('./vocabs/word_vocab.npy')
@@ -254,15 +256,16 @@ def embed_lyrics(sylls, words):
 
     for i in range(len(sylls)):
         try:
-            sylls[i] = syll_vocab.index(sylls[i])
+            sylls[i] = syll_vocab.where(a == sylls[i])[0][0]
         except:
             sylls[i] = random.randint(0, len(syll_vocab))
         try:
-            words[i] = syll_vocab.index(words[i])
+            words[i] = syll_vocab.where(a == words[i])[0][0]
         except:
             words[i] = random.randint(0, len(word_vocab))
 
-    return sylls, words
+    yield sylls
+    yield words
 
 
 def create_song(lyrics):
@@ -270,23 +273,32 @@ def create_song(lyrics):
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")
-
-    sylls, words = embed_lyrics(create_syll(lyrics), lyrics)
+    input = create_syll(lyrics)
+    syl_word = embed_lyrics(next(input), next(input))
+    sylls= next(syl_word)
+    words = next(syl_word)
 
     seq_len = len(sylls)
     batch_size = 1
 
     gen = torch.load("GenModel.pt", map_location=torch.device('cpu'))
-    gen = gen.module.to(device) 
+    gen = gen.to(device) 
 
     noise = torch.normal(0, 1, size=(batch_size ,seq_len, 4))
-    words = words.reshape(batch_size, seq_len, 1)
-    sylls = sylls.reshape(batch_size, seq_len, 1)
-    src = torch.cat((noise, words), dim=2)
-    src = torch.cat((src, sylls), dim=2)
+    words = np.array(words).reshape(batch_size, seq_len, 1)
+    sylls = np.array(sylls).reshape(batch_size, seq_len, 1)
+    src = torch.cat((noise, torch.tensor(words)), dim=2)
+    src = torch.cat((src, torch.tensor(sylls)), dim=2)
 
     tgt = gen(src)
-    generated_sample = tgt[1]
+    generated_sample = tgt[0]
     generated_sample = discretize(generated_sample)
     mp3, audio_data, music21_notes = playSong(generated_sample)
-    soundfile.write('audio2.mp3', audio_data, 44100)
+    stream = music21.stream.Stream(music21_notes)
+    stream.write('xml', fp="test.xml")
+    music_xml= os.path.join('.','test.xml')
+    s = music21.converter.parse(music_xml)
+    if(os.path.exists("./static/img/generate/sheet_music-2.png")):
+        os.remove("./static/img/generate/sheet_music-2.png")
+    s.show('ipython.musicxml.png', fp="./static/img/generate/sheet_music.png")
+    soundfile.write('./static/audio/gen.mp3', audio_data, 44100)

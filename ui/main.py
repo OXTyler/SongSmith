@@ -1,4 +1,6 @@
 from flask import Flask, render_template
+from flask import request
+from generate_song import *
 
 app = Flask(__name__, template_folder="templateFiles")
 
@@ -10,9 +12,9 @@ def index():
 def info_age():
     return render_template('info_page.html')
 
-@app.route("/test")
+@app.route("/test", methods=['POST'])
 def test():
-    print("It works")
+    create_song(request.form['Input'])
     return render_template('generate.html')
 
 if __name__=='__main__':

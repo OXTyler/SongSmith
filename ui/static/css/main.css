@@ -23,6 +23,34 @@ html {
   height: auto;
   z-index: 0;
 }
+#Input{
+  grid-row: 1;
+  grid-column: 1;
+  z-index: 10;
+  margin-left: auto;
+  margin-right: auto;
+  width: auto;
+  margin: auto;
+  text-align: center;
+}
+#Input button {
+  font-size: 24px;
+  font-family: "Cooper Black", serif;
+  background-color: #DF933B;
+  border-radius: 10px;
+  padding: 5px 30px;
+}
+#Input textarea {
+  border-radius: 10px;
+  background: #FFF6D8;
+  width: 700px;
+  height: 375px;
+  margin-top: 300px;
+  text-justify: auto;
+  border: 3px solid black;
+  color: #E0D8BE;
+  font-size: 18px;
+}
 
 .Homepage{
   display: grid;
@@ -47,24 +75,7 @@ html {
   scale: 200%;
 }
 
-.GenerateButton {
-  grid-row: 1;
-  grid-column: 1;
-  z-index: 6;
-  margin-left: auto;
-  margin-right: auto;
-  width: auto;
-  height: 100%;
-}
 
-.GenerateButton button {
-  margin-top: 700px;
-  font-size: 24px;
-  font-family: "Cooper Black", serif;
-  background-color: #DF933B;
-  border-radius: 10px;
-  padding: 5px 30px;
-}
 .LearnMoreButton {
   grid-row: 1;
   grid-column: 1;
@@ -105,27 +116,6 @@ html {
   grid-template-rows: 1fr 1fr;
 }
 
-
-.Textbox {
-  grid-row: 1;
-  grid-column: 1;
-  margin-left: auto;
-  margin-right: auto;
-  width: auto;
-  z-index: 6;
-}
-
-.Textbox textarea {
-  border-radius: 10px;
-  background: #FFF6D8;
-  width: 700px;
-  height: 375px;
-  margin-top: 300px;
-  text-justify: auto;
-  border: 3px solid black;
-  color: #E0D8BE;
-  font-size: 18px;
-}
 
 .Logo {
   margin-left: auto;
