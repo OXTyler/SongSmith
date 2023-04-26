@@ -16,7 +16,7 @@ import soundfile
 import pyphen
 import IPython
 #TODO fix whatever this is
-music21.environment.set("musescoreDirectPNGPath", "C:\\Users\\tyler\\OneDrive\\Documents\\Projects\\Python\\SongSmith\\bin\\musescore3.exe") # tell music21 where MuseScore is installed
+music21.environment.set("musescoreDirectPNGPath", "C:\\Users\\Tyler\\Documents\\Projects\\SongSmith\\bin\\musescore3.exe") # tell music21 where MuseScore is installed
 
 class PositionalEncoding(nn.Module):
     r"""Inject some information about the relative or absolute position of the tokens in the sequence.

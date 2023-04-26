@@ -14,7 +14,7 @@ def info_age():
 
 @app.route("/test", methods=['POST'])
 def test():
-    create_song(request.form['Input'])
+    #create_song(request.form['Input'])
     return render_template('generate.html')
 
 if __name__=='__main__':
