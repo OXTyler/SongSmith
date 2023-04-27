@@ -1,10 +1,11 @@
-#!/usr/bin/env python
-# coding: utf-8
+'''
+SongSmith HiperGator Training Script
 
-# 
+The following script is designed to train the SongSmith transformer GAN in HiperGator.
+The script loads the training data and formats it, defines the model architectures used, and executes the training loop.
+Once the training is finished, the resulting models and state dictionaries are saved to be transfered into the application backend/
 
-# In[1]:
-
+'''
 
 import os
 import random
@@ -16,6 +17,7 @@ import torchtext
 import torchdata
 from torch.utils import data
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import numpy as np
 
 
@@ -33,10 +35,6 @@ path = 'data'
 
 
 files = os.listdir(path)
-print(len(files))
-#print(files[:5])
-
-
 
 songs = []
 for file in files:
@@ -97,21 +95,11 @@ for s in songs:
         if note[4] not in syll_vocab:
             syll_vocab.append(note[4])
 
-#print(word_vocab)
-#print(len(word_vocab))
-#print(syll_vocab)
-#print(len(syll_vocab))
-
-
-
 # encode the words and syllables 
 for s in songs:
     for note in s:
         note[3] = word_vocab.index(note[3])
         note[4] = syll_vocab.index(note[4]) 
-#songs
-
-
 
 # do the same thing as the paper and sample a random 20 note melody from each song
 melodies = []
@@ -124,8 +112,6 @@ for s in songs:
     m = s[idx:idx + 20]
 
     melodies.append(m)
-
-#melodies
 
 
 # turn the melodies into tensors
@@ -213,11 +199,11 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
-
+        
 # input: sequence of {random noise, word, syllable}
 # output: one sequence of {MIDI, duration, rest duration, word, syllable}
 class Generator(nn.Module):
-    def __init__(self, unembedded_input_size, word_vocab_size, syll_vocab_size, embed_size = 10):
+    def __init__(self, unembedded_input_size, word_vocab_size, syll_vocab_size, embed_size = 62):
         super(Generator, self).__init__()
         device = torch.device("cuda")
         self.unembedded_input_size = unembedded_input_size
@@ -228,42 +214,50 @@ class Generator(nn.Module):
         self.word_embedding = nn.Embedding(word_vocab_size, embed_size)
         self.syll_embedding = nn.Embedding(syll_vocab_size, embed_size)
 
-        self.pos_encoder = PositionalEncoding(self.embedded_input_size, dropout = 0.5)
+        self.src_pos_encoder = PositionalEncoding(self.embedded_input_size, dropout = 0.5)
 
         encoder_layers = nn.TransformerEncoderLayer(
             d_model = self.embedded_input_size, 
-            nhead = 2,
-            dim_feedforward=4,
+            nhead = 32,
+            dim_feedforward=512,
             dropout=0.5,
             batch_first=True
             )
 
         self.norm = nn.LayerNorm(self.embedded_input_size).to(device)
-        self.encoder = nn.TransformerEncoder(encoder_layers, num_layers=4, norm=self.norm).to(device)
+        self.encoder = nn.TransformerEncoder(encoder_layers, num_layers=16, norm=self.norm).to(device)
 
         # need linear layer to match input sizes for cross-attention in decoder
         self.encoder_out = nn.Linear(self.embedded_input_size, 3) 
 
+        self.tgt_pos_encoder = PositionalEncoding(3, dropout = 0.5)
+
         decoder_layers = nn.TransformerDecoderLayer(
             d_model = 3, 
-            nhead = 1,
-            dim_feedforward=4,
+            nhead = 3,
+            dim_feedforward=512,
             dropout=0.5,
             batch_first=True
             )
         
-        self.decoder = nn.TransformerDecoder(decoder_layers, num_layers=4).to(device)
+        self.decoder = nn.TransformerDecoder(decoder_layers, num_layers=16).to(device)
 
         self.init_weights()
 
-    def forward(self, src, tgt, tgt_mask):            
+    def forward(self, src, tgt, tgt_mask):
+        batch_size = src.shape[0]
+        seq_len = src.shape[1]
+            
         src_emb = self.embed_lyrics(src)
-        src_emb = self.pos_encoder(src_emb) 
+        src_emb = src_emb * math.sqrt(self.embedded_input_size)
+        src_emb = self.src_pos_encoder(src_emb.permute(1,0,2)).permute(1,0,2) 
 
         memory = self.encoder(src_emb)
         memory = self.encoder_out(memory)
 
-        output = self.decoder(tgt, memory, tgt_mask = tgt_mask)
+        tgt = tgt * math.sqrt(3)
+        tgt = self.tgt_pos_encoder(tgt.permute(1,0,2)).permute(1,0,2)
+        output = self.decoder(tgt, memory, tgt_mask = torch.squeeze(tgt_mask))
         
         return output
     
@@ -298,12 +292,12 @@ class Generator(nn.Module):
         nn.init.uniform_(self.syll_embedding.weight, -initrange, initrange)
         nn.init.zeros_(self.encoder_out.bias)
         nn.init.uniform_(self.encoder_out.weight, -initrange, initrange)
-
+        
 
 # input: a melody example formatted as {MIDI, duration, rest duration, word, syllable}
 # output: a single number that represents if it's real/fake. real = 1, fake = 0
 class Discriminator(nn.Module):
-    def __init__(self, unembedded_input_size, word_vocab_size, syll_vocab_size, embed_size = 9):
+    def __init__(self, unembedded_input_size, word_vocab_size, syll_vocab_size, embed_size = 60):
         super(Discriminator, self).__init__()
         self.unembedded_input_size = unembedded_input_size
         size_wo_lyrics = unembedded_input_size - 2
@@ -322,22 +316,23 @@ class Discriminator(nn.Module):
             batch_first=True
             )
 
-        self.norm = nn.LayerNorm(self.embedded_input_size)
-        self.encoder = nn.TransformerEncoder(encoder_layers, num_layers=4, norm=self.norm)
+        self.norm = nn.LayerNorm(self.embedded_input_size).to(device)
+        self.encoder = nn.TransformerEncoder(encoder_layers, num_layers=16, norm=self.norm)
     
         self.encoder_out = nn.Linear(self.embedded_input_size, 1)
-        self.sigmoid = nn.Sigmoid()
+        self.activation = nn.Sigmoid()
 
         self.init_weights()
 
-    def forward(self, src, src_mask=None):
+    def forward(self, src):
         batch_size = src.shape[0]
         seq_len = src.shape[1]
 
         src = self.embed_lyrics(src)
-        src = self.pos_encoder(src) 
+        src = src * math.sqrt(self.embedded_input_size)
+        src = self.pos_encoder(src.permute(1,0,2)).permute(1,0,2) 
 
-        output = self.encoder(src, src_mask)
+        output = self.encoder(src)
         output = self.encoder_out(output)
         output = output[:,-1,:].reshape(batch_size, 1, 1)
 
@@ -374,6 +369,7 @@ class Discriminator(nn.Module):
         nn.init.uniform_(self.syll_embedding.weight, -initrange, initrange)
         nn.init.zeros_(self.encoder_out.bias)
         nn.init.uniform_(self.encoder_out.weight, -initrange, initrange)
+        
 
 batch_size = 64
 seq_len = 20
@@ -384,6 +380,12 @@ dataloader = data.DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_
 Gen = Generator(6, dataset.get_word_vocab_size(), dataset.get_syll_vocab_size())
 Disc = Discriminator(5, dataset.get_word_vocab_size(), dataset.get_syll_vocab_size())
 
+#loads state dictonary to complete training from last stage
+#state dictionary allows resuming training in different device
+Gen.load_state_dict(torch.load("GenModel_deep.pt", map_location = "cuda")) #not in first training set
+Disc.load_state_dict(torch.load("DiscModel_deep.pt", map_location = "cuda")) #not in first training set
+
+#parallelize on gpus if possible
 ngpu = torch.cuda.device_count()
 if(device.type == 'cuda') and (ngpu > 1):
     Gen = nn.DataParallel(Gen, list(range(ngpu)))
@@ -392,16 +394,18 @@ if(device.type == 'cuda') and (ngpu > 1):
 Gen.to(device)
 Disc.to(device)
 
-gen_learn_rate = 0.04
-disc_learn_rate = 0.4
-num_epochs = 15
+#set model parameters
+gen_learn_rate = 5e-5
+disc_learn_rate = 5e-5
+num_epochs = 500
 
-Gen_Optim = torch.optim.Adam(Gen.parameters(), lr = gen_learn_rate)
-Disc_Optim = torch.optim.Adam(Disc.parameters(), lr = disc_learn_rate)
+Gen_Optim = torch.optim.Adam(Gen.parameters(), lr = gen_learn_rate, betas=(0.5, 0.999))
+Disc_Optim = torch.optim.Adam(Disc.parameters(), lr = disc_learn_rate, betas =(0.5, 0.999))
 
-import matplotlib.pyplot as plt
 
+#generates generator examples for training
 def gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach, device):
+        #gaussian (normally distributed) noise
         noise = torch.normal(0, 1, size=(batch_size, seq_len, 4), device=device)
 
         words = batch[:, :, 3].reshape(batch_size, seq_len, 1)
@@ -413,8 +417,9 @@ def gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach, device):
 
         tgt = batch[:, :, :3].to(device)
         tgt_mask = nn.Transformer.generate_square_subsequent_mask(tgt.shape[1]).to(device)
-
-        fake_examples = Gen(src, tgt, tgt_mask)
+        
+        #calls generator to generate melody from noise input
+        fake_examples = Gen(src, tgt, tgt_mask.unsqueeze(0).repeat(8, 1, 1)).to(device)
 
         if (detach == True):
             fake_examples = fake_examples.detach()
@@ -424,68 +429,8 @@ def gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach, device):
 
         return fake_examples
 
-
-def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, train_steps_D, train_steps_G):
-    
-    criterion = nn.BCEWithLogitsLoss() # Make this an input param so we can change loss function
-    #TODO: default values for parameters
-    loss_G = []
-    loss_D_fake = []
-    loss_D_real = []
-    print("Training started!")
-    for epoch in range(num_epochs):
-        Gen.train()
-        Disc.train()
-        # train the discriminator
-        total_D_Loss_Fake = 0
-        total_D_Loss_Real = 0
-        total_G_Loss = 0
-        for i, batch in enumerate(dataloader, 0):
-            # #Discriminator training
-            Disc_Optim.zero_grad() #not sure if it should be optim
-
-            fake_examples = gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach = True, device = device)
-            fake_predictions = Disc(fake_examples)
-            fake_targets = torch.zeros(fake_predictions.shape).to(device) # want discrminiator to predict fake
-            fake_D_loss = criterion(fake_predictions, fake_targets)
-
-
-            #train using real data from the batch
-            real_D_predictions = Disc(batch.to(device))
-            real_D_target = torch.ones(real_D_predictions.shape).to(device)
-            real_D_target = real_D_target.to(device)
-            real_D_loss = criterion(real_D_predictions, real_D_target)
-
-            D_loss = ((real_D_loss + fake_D_loss)/2)
-            
-            D_loss.backward()
-            Disc_Optim.step()
-            total_D_Loss_Fake += fake_D_loss.item()
-            total_D_Loss_Real += real_D_loss.item()
-
-            #Generator training
-            Gen_Optim.zero_grad() #not sure if it should be optim
-            fake_examples = gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach = False, device = device)
-            D_predictions = Disc(fake_examples)
-            D_targets = torch.ones(D_predictions.shape).to(device)
-            G_loss = criterion(D_predictions, D_targets)
-
-            G_loss.backward()
-            Gen_Optim.step()
-
-            total_G_Loss += G_loss.item()
-
-
-        loss_D_fake.append((total_D_Loss_Fake)/len(dataloader))
-        loss_D_real.append((total_D_Loss_Real)/len(dataloader))
-        loss_G.append((total_G_Loss)/len(dataloader))
-	
-        if epoch % 3 == 0:
-            torch.save(Gen, "models/GenModel_{}.pt".format(epoch))
-            torch.save(Disc, "models/DiscModel_{}.pt".format(epoch))
-
-    import matplotlib.colors as colors
-
+#plots the losses
+def plot(loss_D_fake, loss_D_real, loss_G):
     norm = colors.Normalize(0,1)
     norm(loss_D_real)
     norm(loss_D_fake)
@@ -499,7 +444,76 @@ def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num
     plt.legend(loc = "upper right")
     plt.savefig("Loss.png")
     plt.show()
-    torch.save(Gen, "GenModel.pt")
-    torch.save(Disc, "DiscModel.pt")
+            
+def train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, train_steps_D, train_steps_G):
+    criterion = nn.BCEWithLogitsLoss() #binary classification makes bcewithlogits ideal
+    loss_G = []
+    loss_D_fake = []
+    loss_D_real = []
+    
+    for epoch in range(num_epochs):
+        Gen.train()
+        Disc.train()
+        # train the discriminator
+        total_D_Loss_Fake = 0
+        total_D_Loss_Real = 0
+        total_G_Loss = 0
+        #trains for every batch in the dataloader
+        for i, batch in enumerate(dataloader, 0):
+            #Discriminator training
+            Disc_Optim.zero_grad() #not sure if it should be optim
 
+            fake_examples = gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach = True, device = device)
+            fake_predictions = Disc(fake_examples).squeeze()
+            fake_targets = torch.zeros_like(fake_predictions).to(device) # want discrminiator to predict fake
+            fake_D_loss = criterion(fake_predictions, fake_targets)
+
+            #train using real data from the batch
+            real_D_predictions = Disc(batch.to(device)).squeeze()
+            real_D_target = torch.ones_like(real_D_predictions).to(device)
+            real_D_loss = criterion(real_D_predictions, real_D_target)
+
+            D_loss = ((real_D_loss + fake_D_loss)/2)
+            
+            D_loss.backward()
+            Disc_Optim.step()
+            total_D_Loss_Fake += fake_D_loss.item()
+            total_D_Loss_Real += real_D_loss.item()
+
+            #Generator training
+            Gen_Optim.zero_grad() #not sure if it should be optim
+            fake_examples = gen_fake_train_examples(Gen, batch, batch_size, seq_len, detach = False, device = device)
+            D_predictions = Disc(fake_examples).squeeze()
+            D_targets = torch.ones_like(D_predictions).to(device)
+            G_loss = criterion(D_predictions, D_targets)
+
+            G_loss.backward()
+            Gen_Optim.step()
+
+            total_G_Loss += G_loss.item()
+
+        #keep track of losses
+        loss_D_fake.append((total_D_Loss_Fake)/len(dataloader))
+        loss_D_real.append((total_D_Loss_Real)/len(dataloader))
+        loss_G.append((total_G_Loss)/len(dataloader))
+	
+        #saves model after certain number of epochs and prints to console the current losses
+        if epoch % 50 == 0:
+            torch.save(Gen, "models/GenModel_{}.pt".format(epoch))
+            torch.save(Disc, "models/DiscModel_{}.pt".format(epoch))
+            print("Fake Discriminator Loss: {} after {} epochs".format(loss_D_fake[epoch], epoch+1))
+            print("Real Discriminator Loss: {} after {} epochs".format(loss_D_real[epoch], epoch+1))
+            print("Generator Loss: {} after {} epochs".format(loss_G[epoch], epoch+1))
+            
+            
+    plot(loss_D_fake, loss_D_real, loss_G)
+    #saves both the trained models and their state dictionaries
+    #discriminator is saved for consistency
+    #generator is saved and transfered to backend
+    torch.save(Gen.module.state_dict(), "GenModel_deep.pt")
+    torch.save(Disc.module.state_dict(), "DiscModel_deep.pt")
+    torch.save(Gen, "Gen_full.pt")
+    torch.save(Disc, "Disc_full.pt")
+
+#executes training with the hyperparameters defined above
 train(dataloader, batch_size, seq_len, Gen, Disc, Disc_Optim, Gen_Optim, num_epochs, device, len(dataloader), len(dataloader))
