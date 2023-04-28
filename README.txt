@@ -25,3 +25,5 @@ you need to change the second argument to be the absolute directory to your muse
  after this is done, you can run main.py in the ui folder which will launch the webapp, and everything should work perfect
 
 if you have any issues, pyfluidsynth tends to be the issue, https://github.com/nwhitehead/pyfluidsynth here is where you can find the readme to verify install was correct
+
+learn more word doc: https://docs.google.com/document/d/e/2PACX-1vQbTkpfa3knbxaFnrgBDn7Zeg-wsnIkrWyoAxO6XqIjzeTH5ncaVSt8dozZA8A6IdTVVJDU95Scfv9j/pub
