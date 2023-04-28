@@ -19,7 +19,7 @@ IPython
 flask
 pyfluidsynth (make sure you don't have fluidsynth installed before doing this, having both breaks the whole thing due to an empty project on pip and python 		  not knowing how to fix itself)
 
-last, you will have to go into the generate_song.py
+last, you will have to go into the generate_song.py located in the ui folder
 on line 20, there is a line: music21.environment.set("musescoreDirectPNGPath", "..")
 you need to change the second argument to be the absolute directory to your musescore3 executable
- after this is done, you can run main.py which will launch the webapp, and everything should work perfect
+ after this is done, you can run main.py in the ui folder which will launch the webapp, and everything should work perfect
