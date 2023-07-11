@@ -6,21 +6,23 @@ first, you will need 2 pieces of software installed because your computer must b
 3. any midi instruments installed to your computer, https://www.nerds.de/en/ipmidi.html was one that worked for us, the trial version didnt seem to cause issues
 
 on top of this, you will need several python libraries:
-
-pretty_midi
-music21
-soundfile
-torch
-torchtext
-torchdata
-numpy
-pyphen
-IPython
-flask
+<ul>
+<li>pretty_midi</li>
+<li>music21</li>
+<li>soundfile</li>
+<li>torch</li>
+<li>torchtext</li>
+<li>torchdata</li>
+<li>numpy</li>
+<li>pyphen</li>
+<li>IPython</li>
+<li>flask</li>
+<ul>
 pyfluidsynth (make sure you don't have fluidsynth installed before doing this, having both breaks the whole thing due to an empty project on pip and python 		  not knowing how to fix itself)
 
 last, you will have to go into the generate_song.py located in the ui folder
-on line 20, there is a line: music21.environment.set("musescoreDirectPNGPath", "..")
+on line 20, there is a line: <br>
+ music21.environment.set("musescoreDirectPNGPath", "..") <br>
 you need to change the second argument to be the absolute directory to your musescore3 executable
  after this is done, you can run main.py in the ui folder which will launch the webapp, and everything should work perfect
 
