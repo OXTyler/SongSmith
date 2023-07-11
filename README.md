@@ -17,7 +17,7 @@ on top of this, you will need several python libraries:
 <li>pyphen</li>
 <li>IPython</li>
 <li>flask</li>
-<ul>
+</ul>
 pyfluidsynth (make sure you don't have fluidsynth installed before doing this, having both breaks the whole thing due to an empty project on pip and python 		  not knowing how to fix itself)
 
 last, you will have to go into the generate_song.py located in the ui folder
