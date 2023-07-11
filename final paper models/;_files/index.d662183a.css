@@ -1,2 +1,0 @@
-body::-webkit-scrollbar,div::-webkit-scrollbar,html::-webkit-scrollbar{display:none;width:0}body,html{background-color:#1c2639;margin:0;overflow:hidden;padding:0}div#terminal{height:100%;left:0;position:absolute;top:0;width:100%}div#terminal .xterm-viewport{overflow-y:hidden}.toast{background-color:#b6c3d9;border-radius:.75em;box-shadow:0 0 10px 0 rgba(0,0,0,.75);color:#1c2639;font-family:sans-serif;font-size:x-large;left:50%;padding:.5em;position:absolute;top:50%;transform:translate(-50%,-50%);z-index:5}
-/*# sourceMappingURL=index.d662183a.css.map */
