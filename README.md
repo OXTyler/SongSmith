@@ -28,7 +28,9 @@ On top of this, you will need several python libraries:
 <li>Pyfluidsynth (make sure you don't have fluidsynth installed before doing this, having both breaks the whole thing due to an empty project on pip and python not knowing how to fix itself)</li>
 </ul>
 
-Last, you will have to go into the generate_song.py located in the ui folder on line 20, there is a line: ```music21.environment.set("musescoreDirectPNGPath", "..")```. You need to change the second argument to be the absolute directory to your musescore3 executable after this is done, you can run main.py in the ui folder which will launch the webapp, and everything should work perfect.
+Last, you will have to go into the generate_song.py located in the ui folder on line 20, there is a line: ```music21.environment.set("musescoreDirectPNGPath", "..")```. You need to change the second argument to be the absolute directory to your musescore3 executable. 
+
+After this is done, you can run main.py in the ui folder which will launch the webapp, and everything should work perfect.
 
 If you have any issues, pyfluidsynth tends to be the issue. https://github.com/nwhitehead/pyfluidsynth is where you can find the readme to verify install was correct.
 
