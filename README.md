@@ -3,7 +3,7 @@ SongSmith is a senior project created by three UF students.
 
 It is a Django web app that takes in lyrics and generates a corresponding MIDI melody based on the lyrics. It uses a TransGAN neural network written in PyTorch that was trained on the [Lakh MIDI Dataset](https://colinraffel.com/projects/lmd/).
 
-We also wrote up a related blog post/article going over how our model works and the machine learning concepts underlying it. The article is meant to be accessible to any intelligent lay reader (no ML or programming experience required). [Link here](https://docs.google.com/document/d/e/2PACX-1vQbTkpfa3knbxaFnrgBDn7Zeg-wsnIkrWyoAxO6XqIjzeTH5ncaVSt8dozZA8A6IdTVVJDU95Scfv9j/pub).
+We also wrote up a related blog post/article going over how our model works and the machine learning concepts underlying it. The article is meant to be accessible to any intelligent lay reader (no ML or programming experience required). [Link here](https://docs.google.com/document/d/1vVNCFTA1YSEiOMaUv5e3kjNDpBiqw7c1T5KP25NDz3Q/edit?usp=sharing).
 
 # Running the Project
 There are several steps to run the project.
